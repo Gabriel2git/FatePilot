@@ -14,3 +14,10 @@ __pycache__/
 # IDE配置
 .idea/
 *.iml
+
+# 克隆的项目副本
+cursor/
+trae/
+
+# 本地后端数据和服务
+backend/

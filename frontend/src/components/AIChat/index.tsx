@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/lib/ai';
 
 interface BirthData {
@@ -47,7 +48,7 @@ export default function AIChat({
   onLoadHistory
 }: AIChatProps) {
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col relative">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">🤖 AI 命理师</h2>
         <div className="flex gap-2">
@@ -75,12 +76,7 @@ export default function AIChat({
         </div>
       </div>
 
-      {showDebug && (
-        <div className="mb-4 bg-gray-900 text-green-400 p-4 rounded-lg text-xs font-mono max-h-48 overflow-y-auto">
-          <pre>{debugPrompt}</pre>
-        </div>
-      )}
-
+      {/* 聊天区 */}
       <div
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto bg-white dark:bg-[#1a2a2a] rounded-2xl shadow-2xl p-6 mb-4"
@@ -123,6 +119,7 @@ export default function AIChat({
         )}
       </div>
 
+      {/* 输入区 */}
       <div className="bg-white dark:bg-[#1a2a2a] rounded-2xl shadow-2xl p-4">
         <div className="flex gap-2">
           <textarea
@@ -148,6 +145,34 @@ export default function AIChat({
           </p>
         )}
       </div>
+
+      {/* 调试窗口 - 覆盖在对话窗口之上 */}
+      {showDebug && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-900 text-green-400 rounded-lg text-xs font-mono max-w-4xl w-full max-h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-gray-700">
+              <h3 className="font-bold">系统提示词</h3>
+              <button
+                onClick={() => setShowDebug(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <pre>{debugPrompt}</pre>
+            </div>
+            <div className="p-4 border-t border-gray-700 flex justify-end">
+              <button
+                onClick={() => setShowDebug(false)}
+                className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors"
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -9,6 +9,10 @@ import { useSavedCases } from '@/hooks/useSavedCases';
 import Sidebar from '@/components/Sidebar';
 import ChartView from '@/components/ChartView';
 import AIChat from '@/components/AIChat';
+import RagTest from '@/components/RagTest';
+
+// 扩展页面类型
+type PageType = '命盘显示' | 'AI 命理师' | 'RAG 测试';
 
 interface BirthData {
   birthday: string;
@@ -27,7 +31,7 @@ interface DecadalInfo {
 }
 
 export default function Home() {
-  const [currentPage, setCurrentPage] = useState<'命盘显示' | 'AI 命理师'>('命盘显示');
+  const [currentPage, setCurrentPage] = useState<PageType>('命盘显示');
   const [selectedModel, setSelectedModel] = useState(AI_MODELS[0]);
   const [darkMode, setDarkMode] = useState(false);
 
@@ -38,7 +42,7 @@ export default function Home() {
   const [selectedDecadal, setSelectedDecadal] = useState<DecadalInfo | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
 
-  const { ziweiData, isRefreshingData, horoscopeYear, loadZiweiData, updateHoroscopeYear } = useZiweiData();
+  const { ziweiData, isRefreshingData, horoscopeYear, error, loadZiweiData, updateHoroscopeYear, setError } = useZiweiData();
   const {
     messages,
     inputMessage,
@@ -65,12 +69,14 @@ export default function Home() {
   const handleDataLoaded = async (data: BirthData) => {
     setBirthData(data);
     setHasBirthData(true);
+    setError(null); // 清除之前的错误
     
     try {
       const realZiweiData = await loadZiweiData(data);
       initializeChat(realZiweiData);
     } catch (error) {
       console.error('获取后端数据失败:', error);
+      // 错误已经在 useZiweiData 中设置
     }
   };
 
@@ -80,11 +86,13 @@ export default function Home() {
     const newYear = date.getFullYear();
     if (newYear === horoscopeYear) return;
     
+    setError(null); // 清除之前的错误
     try {
       const realZiweiData = await updateHoroscopeYear(birthData, newYear);
       updateChatForHoroscope(realZiweiData);
     } catch (error) {
       console.error('更新命盘数据失败:', error);
+      // 错误已经在 useZiweiData 中设置
     }
   };
 
@@ -170,6 +178,16 @@ export default function Home() {
         />
 
         <main className="flex-1 p-6 overflow-hidden">
+          {/* 错误信息显示 */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg dark:bg-red-900/30 dark:border-red-800 dark:text-red-400">
+              <div className="flex items-center">
+                <div className="mr-2 text-red-500">⚠️</div>
+                <div>{error}</div>
+              </div>
+            </div>
+          )}
+          
           {currentPage === '命盘显示' ? (
             <ChartView
               ziweiData={ziweiData}
@@ -186,7 +204,7 @@ export default function Home() {
               onDeleteCase={handleDeleteSavedCase}
               onTestAIPrompt={handleTestAIPrompt}
             />
-          ) : (
+          ) : currentPage === 'AI 命理师' ? (
             <AIChat
               messages={messages}
               inputMessage={inputMessage}
@@ -205,6 +223,8 @@ export default function Home() {
               onSaveHistory={() => saveChatHistory(birthData?.birthday || '', birthData?.gender || '')}
               onLoadHistory={loadChatHistory}
             />
+          ) : (
+            <RagTest onBack={() => setCurrentPage('AI 命理师')} />
           )}
         </main>
       </div>

@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+import html2canvas from 'html2canvas';
 import ZiweiChart from '@/components/ZiweiChart';
 import { getLunarBaseYear, getGregorianYearByNominalAge, getEarthlyBranchByYear } from '@/lib/shichen';
 
@@ -56,12 +58,36 @@ export default function ChartView({
   onDeleteCase,
   onTestAIPrompt
 }: ChartViewProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  // 导出命盘为图片
+  const handleExportChart = async () => {
+    if (!chartRef.current) return;
+
+    try {
+      const canvas = await html2canvas(chartRef.current, {
+        scale: 2, // 提高清晰度
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `紫微斗数命盘_${birthData?.birthday || Date.now()}.png`;
+      link.click();
+    } catch (error) {
+      console.error('导出命盘失败:', error);
+      alert('导出命盘失败，请重试');
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto h-full overflow-y-auto">
       {ziweiData && birthData ? (
         <>
           <div className="bg-white dark:bg-[#1a2a2a] rounded-2xl shadow-2xl p-8">
-            <div className="flex justify-center mb-6">
+            <div className="flex justify-center mb-6" ref={chartRef}>
               <ZiweiChart 
                 ziweiData={{
                   astrolabe: ziweiData?.astrolabe,
@@ -149,7 +175,7 @@ export default function ChartView({
           </div>
 
           <div className="border-t border-gray-100 dark:border-gray-800 pt-6 mt-6">
-            <div className="flex gap-4 mb-4">
+            <div className="flex flex-wrap gap-4 mb-4">
               <button
                 onClick={onSaveCase}
                 className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
@@ -161,6 +187,12 @@ export default function ChartView({
                 className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
               >
                 📂 历史命例 ({savedCases.length})
+              </button>
+              <button
+                onClick={handleExportChart}
+                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+              >
+                🖼️ 导出命盘
               </button>
             </div>
 

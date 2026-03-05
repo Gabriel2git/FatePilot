@@ -32,7 +32,7 @@ export default function ZiweiChart(props: ZiweiChartProps) {
   return React.createElement(
     'div',
     {
-      className: 'w-[90%] aspect-square md:aspect-auto md:h-[640px] grid grid-cols-4 grid-rows-4 gap-[1px] bg-gray-800 border-2 border-gray-800 mx-auto'
+      className: 'w-full max-w-4xl aspect-square md:aspect-auto md:h-[680px] grid grid-cols-4 grid-rows-4 gap-[1px] bg-gray-800 border-2 border-gray-800 mx-auto'
     },
     EARTHLY_BRANCHES.map((branch) => {
       const palaceData = palaces.find((p: any) => p.earthlyBranch === branch);
@@ -40,7 +40,7 @@ export default function ZiweiChart(props: ZiweiChartProps) {
         'div',
         {
           key: branch,
-          className: `${GRID_MAPPING[branch]} bg-white relative`
+          className: `${GRID_MAPPING[branch]} bg-white dark:bg-gray-800 relative`
         },
         React.createElement(PalaceCell, {
           palace: palaceData,
@@ -55,7 +55,7 @@ export default function ZiweiChart(props: ZiweiChartProps) {
     React.createElement(
       'div',
       {
-        className: 'col-start-2 col-span-2 row-start-2 row-span-2 bg-[#f8f9fa] relative z-10'
+        className: 'col-start-2 col-span-2 row-start-2 row-span-2 bg-[#f8f9fa] dark:bg-gray-800 relative z-10'
       },
       React.createElement(CenterInfo, {
         astrolabe: astrolabe,

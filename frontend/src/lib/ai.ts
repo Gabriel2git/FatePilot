@@ -19,6 +19,7 @@ export interface ZiweiData {
 }
 
 const AI_MODELS = [
+  "qwen3.5-flash",
   "deepseek-v3.2",
   "glm-4.7",
   "kimi-k2.5"
@@ -435,6 +436,35 @@ ${fullChartContext}
   return systemPrompt;
 }
 
+// 调用RAG检索API
+async function fetchRAGContext(query: string): Promise<string> {
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/rag/search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        query: query,
+        topK: 3
+      })
+    });
+
+    if (!response.ok) {
+      console.warn('RAG检索失败:', response.status);
+      return '';
+    }
+
+    const data = await response.json();
+    return data.context || '';
+  } catch (error) {
+    console.error('RAG检索错误:', error);
+    return '';
+  }
+}
+
 async function getLLMResponse(messages: Message[], model: string = 'deepseek-v3.2'): Promise<ReadableStream<Uint8Array> | null> {
   const apiKey = process.env.NEXT_PUBLIC_DASHSCOPE_API_KEY;
   const baseUrl = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
@@ -443,24 +473,74 @@ async function getLLMResponse(messages: Message[], model: string = 'deepseek-v3.
     throw new Error('DASHSCOPE_API_KEY is not set');
   }
 
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: messages,
-      stream: true
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+  // 获取用户最新的问题
+  const userMessages = messages.filter(m => m.role === 'user');
+  const latestUserMessage = userMessages[userMessages.length - 1];
+  
+  // 调用RAG检索获取上下文
+  let ragContext = '';
+  if (latestUserMessage) {
+    ragContext = await fetchRAGContext(latestUserMessage.content);
   }
 
-  return response.body;
+  // 如果有RAG上下文，添加到系统提示中
+  const enhancedMessages = ragContext 
+    ? messages.map(m => {
+        if (m.role === 'system' && m.content) {
+          return {
+            role: 'system' as const,
+            content: m.content + '\n\n## 参考资料\n' + ragContext
+          };
+        }
+        return m;
+      })
+    : messages;
+
+  console.log('发送API请求:', {
+    model,
+    messages: enhancedMessages.map(m => ({ role: m.role, content: m.content.substring(0, 100) + '...' })),
+    url: `${baseUrl}/chat/completions`
+  });
+
+  try {
+    // 构建请求体
+    const requestBody: any = {
+      model: model,
+      messages: enhancedMessages,
+      stream: true
+    };
+    
+    // 为qwen3.5-flash模型添加思考功能
+    if (model === 'qwen3.5-flash') {
+      requestBody.extra_body = {
+        enable_thinking: true
+      };
+    }
+    
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    console.log('API响应状态:', response.status);
+    console.log('API响应头:', Object.fromEntries(response.headers.entries()));
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API响应错误:', errorText);
+      throw new Error(`API request failed: ${response.status} - ${errorText}`);
+    }
+
+    console.log('获取响应流');
+    return response.body;
+  } catch (error) {
+    console.error('API请求失败:', error);
+    throw error;
+  }
 }
 
 export {

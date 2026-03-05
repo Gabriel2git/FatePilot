@@ -1,9 +1,12 @@
 import BirthForm from '@/components/BirthForm';
 import { AI_MODELS } from '@/lib/ai';
 
+// 扩展页面类型
+type PageType = '命盘显示' | 'AI 命理师' | 'RAG 测试';
+
 interface SidebarProps {
-  currentPage: '命盘显示' | 'AI 命理师';
-  setCurrentPage: (page: '命盘显示' | 'AI 命理师') => void;
+  currentPage: PageType;
+  setCurrentPage: (page: PageType) => void;
   selectedModel: string;
   setSelectedModel: (model: string) => void;
   darkMode: boolean;
@@ -55,6 +58,16 @@ export default function Sidebar({
           }`}
         >
           🤖 AI 命理师
+        </button>
+        <button
+          onClick={() => setCurrentPage('RAG 测试')}
+          className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
+            currentPage === 'RAG 测试'
+              ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 font-semibold'
+              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+          }`}
+        >
+          🔍 RAG 测试
         </button>
       </div>
 

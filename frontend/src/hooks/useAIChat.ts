@@ -60,13 +60,17 @@ export function useAIChat(ziweiData: ZiweiData | null, horoscopeYear: number) {
   const sendMessage = async (model: string) => {
     if (!inputMessage.trim() || isLoading) return;
 
+    console.log('开始发送消息:', inputMessage);
     const userMessage: Message = { role: 'user', content: inputMessage };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInputMessage('');
     setIsLoading(true);
 
+    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+
     try {
+      console.log('生成系统提示词');
       const systemPrompt = ziweiData 
         ? generateMasterPrompt(inputMessage, ziweiData, horoscopeYear)
         : getDefaultSystemPrompt();
@@ -76,50 +80,101 @@ export function useAIChat(ziweiData: ZiweiData | null, horoscopeYear: number) {
         ...newMessages.filter(m => m.role !== 'system')
       ];
 
+      console.log('调用LLM API:', model);
       const stream = await getLLMResponse(dynamicMessages, model);
       if (!stream) throw new Error('Failed to get response stream');
       
-      const reader = stream.getReader();
+      console.log('获取流读取器');
+      reader = stream.getReader();
       const decoder = new TextDecoder();
       let aiResponseContent = '';
       
       const tempMessageIndex = newMessages.length;
       setMessages([...newMessages, { role: 'assistant', content: '' }]);
+      console.log('添加空的AI响应消息');
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      console.log('开始处理流数据');
+      let readAttempts = 0;
+      const maxReadAttempts = 1000; // 防止无限循环
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n').filter(line => line.trim() !== '');
+      while (readAttempts < maxReadAttempts) {
+        console.log(`读取流数据... (尝试 ${readAttempts + 1})`);
+        readAttempts++;
+        
+        try {
+          const { done, value } = await reader.read();
+          console.log('流读取结果:', { done, value: value ? value.length : 0 });
+          
+          if (done) {
+            console.log('流处理完成');
+            break;
+          }
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.choices && data.choices[0]?.delta?.content) {
-                aiResponseContent += data.choices[0].delta.content;
-                setMessages(prev => {
-                  const newMsgs = [...prev];
-                  newMsgs[tempMessageIndex] = { role: 'assistant', content: aiResponseContent };
-                  return newMsgs;
-                });
+          if (value) {
+            const chunk = decoder.decode(value);
+            console.log('解码后的流数据:', chunk);
+            const lines = chunk.split('\n').filter(line => line.trim() !== '');
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  console.log('解析后的流数据:', data);
+                  if (data.choices && data.choices[0]?.delta?.content) {
+                    aiResponseContent += data.choices[0].delta.content;
+                    console.log('更新AI响应内容:', aiResponseContent);
+                    setMessages(prev => {
+                      const newMsgs = [...prev];
+                      newMsgs[tempMessageIndex] = { role: 'assistant', content: aiResponseContent };
+                      return newMsgs;
+                    });
+                  }
+                } catch (e) {
+                  console.error('解析流数据失败:', e);
+                  console.error('失败的行:', line);
+                }
               }
-            } catch (e) {
             }
           }
+        } catch (readError) {
+          console.error('流读取失败:', readError);
+          break; // 出错时跳出循环
         }
       }
+
+      if (readAttempts >= maxReadAttempts) {
+        console.error('流读取尝试次数超过限制，可能存在无限循环');
+        throw new Error('流读取超时: 超过最大尝试次数');
+      }
+
     } catch (error) {
       console.error('AI 响应失败:', error);
-      setMessages(prev => [
-        ...prev.slice(0, -1), 
-        {
-          role: 'assistant',
-          content: `抱歉，AI 服务调用失败。请确保环境变量配置正确或稍后重试。\n\n错误详情: ${error instanceof Error ? error.message : '未知错误'}`
+      setMessages(prev => {
+        // 确保不会尝试删除不存在的消息
+        const updatedMessages = [...prev];
+        if (updatedMessages.length > newMessages.length) {
+          updatedMessages[newMessages.length] = {
+            role: 'assistant',
+            content: `抱歉，AI 服务调用失败。请确保环境变量配置正确或稍后重试。\n\n错误详情: ${error instanceof Error ? error.message : '未知错误'}`
+          };
+        } else {
+          updatedMessages.push({
+            role: 'assistant',
+            content: `抱歉，AI 服务调用失败。请确保环境变量配置正确或稍后重试。\n\n错误详情: ${error instanceof Error ? error.message : '未知错误'}`
+          });
         }
-      ]);
+        return updatedMessages;
+      });
     } finally {
+      console.log('释放流读取器');
+      if (reader) {
+        try {
+          reader.releaseLock();
+        } catch (e) {
+          console.error('释放流读取器失败:', e);
+        }
+      }
+      console.log('重置isLoading状态');
       setIsLoading(false);
     }
   };

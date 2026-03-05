@@ -26,6 +26,7 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
   const [loading, setLoading] = useState(false);
   const [selectedCity, setSelectedCity] = useState('beijing');
   const [customLongitude, setCustomLongitude] = useState('');
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   
   // 常见城市及其经度
   const cities = [
@@ -49,10 +50,50 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
     return city ? city.longitude : 120.033; // 默认经度
   };
 
+  // 验证日期是否有效
+  const isValidDate = (year: number, month: number, day: number): boolean => {
+    const date = new Date(year, month - 1, day);
+    return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+  };
+
+  // 验证经度是否有效
+  const isValidLongitude = (longitude: string): boolean => {
+    const num = parseFloat(longitude);
+    return !isNaN(num) && num >= -180 && num <= 180;
+  };
+
+  // 验证表单
+  const validateForm = (): boolean => {
+    const newErrors: { [key: string]: string } = {};
+
+    // 验证日期
+    if (!isValidDate(year, month, day)) {
+      newErrors.date = '请选择有效的日期';
+    }
+
+    // 验证经度
+    if (selectedCity === 'custom') {
+      if (!customLongitude) {
+        newErrors.longitude = '请输入经度值';
+      } else if (!isValidLongitude(customLongitude)) {
+        newErrors.longitude = '经度值应在 -180 到 180 之间';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const shichen = getShichenFromHour(hour);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 验证表单
+    if (!validateForm()) {
+      return;
+    }
+    
     setLoading(true);
 
     setTimeout(() => {
@@ -107,11 +148,11 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
 
       <div className="space-y-2">
         <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">🎂 出生日期</label>
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           <select
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
-            className="flex-1 p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm"
+            className={`flex-1 min-w-[80px] p-2 border-2 ${errors.date ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm`}
           >
             {years.map((y) => (
               <option key={y} value={y} className="text-gray-900 dark:text-gray-100">{y}年</option>
@@ -120,7 +161,7 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
           <select
             value={month}
             onChange={(e) => setMonth(Number(e.target.value))}
-            className="flex-1 p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm"
+            className={`flex-1 min-w-[60px] p-2 border-2 ${errors.date ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm`}
           >
             {months.map((m) => (
               <option key={m} value={m} className="text-gray-900 dark:text-gray-100">{m}月</option>
@@ -129,13 +170,14 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
           <select
             value={day}
             onChange={(e) => setDay(Number(e.target.value))}
-            className="flex-1 p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm"
+            className={`flex-1 min-w-[60px] p-2 border-2 ${errors.date ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm`}
           >
             {days.map((d) => (
               <option key={d} value={d} className="text-gray-900 dark:text-gray-100">{d}日</option>
             ))}
           </select>
         </div>
+        {errors.date && <p className="text-xs text-red-500 dark:text-red-400">{errors.date}</p>}
       </div>
 
       {isLunar && (
@@ -152,11 +194,11 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
 
       <div className="space-y-2">
         <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">⏰ 出生时间</label>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
           <select
             value={hour}
             onChange={(e) => setHour(Number(e.target.value))}
-            className="flex-1 p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm"
+            className="flex-1 min-w-[80px] p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm"
           >
             {hours.map((h) => (
               <option key={h} value={h} className="text-gray-900 dark:text-gray-100">{h.toString().padStart(2, '0')}时</option>
@@ -166,7 +208,7 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
           <select
             value={minute}
             onChange={(e) => setMinute(Number(e.target.value))}
-            className="flex-1 p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm"
+            className="flex-1 min-w-[80px] p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm"
           >
             {minutes.map((m) => (
               <option key={m} value={m} className="text-gray-900 dark:text-gray-100">{m.toString().padStart(2, '0')}分</option>
@@ -202,9 +244,10 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
             value={customLongitude}
             onChange={(e) => setCustomLongitude(e.target.value)}
             placeholder="请输入经度值（例如：116.41）"
-            className="w-full p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm"
+            className={`w-full p-2 border-2 ${errors.longitude ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm`}
           />
         )}
+        {errors.longitude && <p className="text-xs text-red-500 dark:text-red-400">{errors.longitude}</p>}
         
         <div className="bg-blue-50 dark:bg-blue-900/30 p-2 rounded-lg border border-blue-200 dark:border-blue-800/50">
           <div className="flex items-center justify-between">
@@ -255,11 +298,7 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
         )}
       </button>
 
-      <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
-        <p className="text-xs text-gray-700 dark:text-gray-400 text-center">
-          💡 使用 react-iztro 专业组件，精准计算紫微斗数命盘
-        </p>
-      </div>
+
     </form>
   );
 }

@@ -1,7 +1,12 @@
 const http = require('http');
 const iztro = require('iztro');
+const RetrievalService = require('../backend/services/retrievalService');
 
 const port = 3001;
+
+// 初始化检索服务
+const retrievalService = new RetrievalService();
+retrievalService.initialize().catch(console.error);
 
 // 解析 JSON 请求体的函数
 function parseRequestBody(req) {
@@ -78,6 +83,82 @@ const server = http.createServer(async (req, res) => {
 
     } catch (error) {
       console.error('Error:', error);
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: error.message }));
+    }
+    return;
+  }
+
+  // RAG 检索 API 接口
+  if (req.method === 'POST' && req.url === '/api/rag/search') {
+    try {
+      const body = await parseRequestBody(req);
+      const { query, topK = 3 } = body;
+      
+      if (!query) {
+        res.statusCode = 400;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: 'Missing query parameter' }));
+        return;
+      }
+
+      // 执行检索
+      const results = await retrievalService.search(query, topK);
+      
+      // 构建上下文
+      const context = retrievalService.buildContext(results);
+
+      // 返回结果
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({
+        results: results,
+        context: context
+      }));
+
+    } catch (error) {
+      console.error('RAG search error:', error);
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: error.message }));
+    }
+    return;
+  }
+
+  // RAG 测试 API 接口
+  if (req.method === 'POST' && req.url === '/api/rag/test') {
+    try {
+      const body = await parseRequestBody(req);
+      const { query, topK = 3 } = body;
+      
+      if (!query) {
+        res.statusCode = 400;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: 'Missing query parameter' }));
+        return;
+      }
+
+      // 执行检索
+      const results = await retrievalService.search(query, topK);
+      
+      // 构建上下文
+      const context = retrievalService.buildContext(results);
+
+      // 生成模拟的LLM prompt
+      const prompt = `你是一位专业的紫微斗数命理师，根据以下资料回答用户的问题：\n\n${context}\n\n用户问题：${query}\n\n请根据上述资料，提供详细、专业的回答。`;
+
+      // 返回结果
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({
+        results: results,
+        context: context,
+        prompt: prompt
+      }));
+
+    } catch (error) {
+      console.error('RAG test error:', error);
       res.statusCode = 500;
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ error: error.message }));
