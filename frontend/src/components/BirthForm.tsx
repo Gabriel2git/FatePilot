@@ -11,6 +11,7 @@ interface BirthFormProps {
     birthdayType: 'solar' | 'lunar';
     gender: 'male' | 'female';
     longitude: number;
+    isLeap: boolean;
   }) => void;
 }
 
@@ -108,6 +109,7 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
         birthdayType,
         gender,
         longitude,
+        isLeap,
       });
       
       setLoading(false);

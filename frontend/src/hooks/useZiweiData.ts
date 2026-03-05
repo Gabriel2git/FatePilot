@@ -9,6 +9,7 @@ interface BirthData {
   birthdayType: 'solar' | 'lunar';
   gender: 'male' | 'female';
   longitude: number;
+  isLeap: boolean;
 }
 
 interface ZiweiData {
@@ -37,7 +38,7 @@ class ZiweiCache {
 
   // 生成缓存键
   private generateKey(birthData: BirthData, targetYear: number): string {
-    return `${birthData.birthday}_${birthData.birthTime}_${birthData.birthMinute}_${birthData.birthdayType}_${birthData.gender}_${birthData.longitude}_${targetYear}`;
+    return `${birthData.birthday}_${birthData.birthTime}_${birthData.birthMinute}_${birthData.birthdayType}_${birthData.gender}_${birthData.longitude}_${birthData.isLeap}_${targetYear}`;
   }
 
   // 获取缓存数据
@@ -122,6 +123,8 @@ export function useZiweiData() {
         hourIndex: shichenIndex,
         minute: data.birthMinute,
         gender: data.gender,
+        isLunar: data.birthdayType === 'lunar',
+        isLeap: data.isLeap,
         longitude: data.longitude,
         targetYear: targetYear
       }),

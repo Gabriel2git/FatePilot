@@ -21,6 +21,7 @@ interface BirthData {
   birthdayType: 'solar' | 'lunar';
   gender: 'male' | 'female';
   longitude: number;
+  isLeap: boolean;
 }
 
 interface DecadalInfo {
