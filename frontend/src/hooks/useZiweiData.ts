@@ -72,11 +72,11 @@ class ZiweiCache {
   // 清理过期缓存
   private cleanup(): void {
     const now = Date.now();
-    for (const [key, { timestamp }] of this.cache.entries()) {
-      if (now - timestamp > this.maxAge) {
+    this.cache.forEach((value, key) => {
+      if (now - value.timestamp > this.maxAge) {
         this.cache.delete(key);
       }
-    }
+    });
   }
 
   // 清空缓存
