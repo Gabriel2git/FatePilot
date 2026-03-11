@@ -178,19 +178,19 @@ export default function ChartView({
             <div className="flex flex-wrap gap-4 mb-4">
               <button
                 onClick={onSaveCase}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                className="px-3 py-1.5 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
               >
                 💾 保存命例
               </button>
               <button
                 onClick={() => setShowSavedCases(!showSavedCases)}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
               >
                 📂 历史命例 ({savedCases.length})
               </button>
               <button
                 onClick={handleExportChart}
-                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                className="px-3 py-1.5 text-sm bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
               >
                 🖼️ 导出命盘
               </button>

@@ -296,7 +296,7 @@ export default function Home() {
           </>
         )}
 
-        <main className="flex-1 p-1 md:p-6 overflow-hidden pb-28 md:pb-6">
+        <main className="flex-1 p-1 md:p-6 overflow-hidden pb-16 md:pb-6">
           {/* 错误信息显示 */}
           {error && (
             <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg dark:bg-red-900/30 dark:border-red-800 dark:text-red-400">
