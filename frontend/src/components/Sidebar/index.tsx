@@ -25,7 +25,8 @@ export default function Sidebar({
 }: SidebarProps) {
   return (
     <aside className="w-full bg-white dark:bg-[#1a2a2a] shadow-xl p-4 lg:p-5 flex flex-col h-full overflow-y-auto">
-      <div className="flex justify-between items-center mb-6">
+      {/* 桌面端显示标题，移动端隐藏（已在 page.tsx 顶部显示） */}
+      <div className="hidden md:flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-purple-700 dark:text-purple-400">
           🟣 AI 紫微斗数 Pro
         </h1>
@@ -37,8 +38,16 @@ export default function Sidebar({
           {darkMode ? '☀️' : '🌙'}
         </button>
       </div>
-      
-      <div className="mb-6 space-y-2">
+
+      {/* 移动端显示设置标题 */}
+      <div className="md:hidden mb-4">
+        <h2 className="text-lg font-bold text-purple-700 dark:text-purple-400">
+          设置
+        </h2>
+      </div>
+
+      {/* 桌面端导航按钮，移动端隐藏（使用底部导航） */}
+      <div className="hidden md:block mb-6 space-y-2">
         <button
           onClick={() => setCurrentPage('命盘显示')}
           className={`w-full text-left px-4 py-2 rounded-lg transition-all ${

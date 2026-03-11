@@ -43,6 +43,20 @@ export default function Home() {
   const dragStartX = useRef(0);
   const dragStartWidth = useRef(0);
 
+  // 移动端侧边栏状态
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 检测屏幕尺寸
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // 处理拖动开始
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     setIsDragging(true);
@@ -222,10 +236,10 @@ export default function Home() {
   return (
     <div className="h-screen overflow-hidden bg-gradient-to-br from-purple-50 to-blue-50 dark:from-[#0f1a1a] dark:to-[#0a1414]">
       <div className="flex h-full">
-        {/* 侧边栏容器 */}
+        {/* 桌面端侧边栏容器 */}
         <div 
           ref={sidebarRef}
-          className="relative flex-shrink-0"
+          className="hidden md:block relative flex-shrink-0"
           style={{ width: sidebarWidth }}
         >
           <Sidebar
@@ -249,7 +263,40 @@ export default function Home() {
           </div>
         </div>
 
-        <main className="flex-1 p-6 overflow-hidden">
+        {/* 移动端侧边栏遮罩 */}
+        {mobileSidebarOpen && (
+          <>
+            <div 
+              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+              onClick={() => setMobileSidebarOpen(false)}
+            />
+            <div className="fixed left-0 top-0 bottom-0 w-80 z-50 bg-white dark:bg-[#1a2a2a] shadow-2xl md:hidden overflow-y-auto">
+              <div className="p-4">
+                <button
+                  onClick={() => setMobileSidebarOpen(false)}
+                  className="mb-4 p-2 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center gap-2"
+                >
+                  <span>✕</span>
+                  <span>关闭</span>
+                </button>
+                <Sidebar
+                  currentPage={currentPage}
+                  setCurrentPage={(page) => {
+                    setCurrentPage(page);
+                    setMobileSidebarOpen(false);
+                  }}
+                  selectedModel={selectedModel}
+                  setSelectedModel={setSelectedModel}
+                  darkMode={darkMode}
+                  toggleDarkMode={toggleDarkMode}
+                  onDataLoaded={handleDataLoaded}
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        <main className="flex-1 p-4 md:p-6 overflow-hidden pb-20 md:pb-6">
           {/* 错误信息显示 */}
           {error && (
             <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg dark:bg-red-900/30 dark:border-red-800 dark:text-red-400">
@@ -260,6 +307,19 @@ export default function Home() {
             </div>
           )}
           
+          {/* 移动端顶部导航栏 */}
+          <div className="md:hidden flex items-center justify-between mb-4">
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow flex items-center gap-2"
+            >
+              <span>☰</span>
+              <span className="text-sm">菜单</span>
+            </button>
+            <h1 className="text-lg font-bold text-purple-700 dark:text-purple-400">AI 紫微斗数</h1>
+            <div className="w-16" /> {/* 占位 */}
+          </div>
+
           {currentPage === '命盘显示' ? (
             <ChartView
               ziweiData={ziweiData}
@@ -307,6 +367,33 @@ export default function Home() {
             <RagTest onBack={() => setCurrentPage('AI 命理师')} />
           )}
         </main>
+      </div>
+
+      {/* 移动端底部导航 */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#1a2a2a] border-t border-gray-200 dark:border-gray-700 z-30">
+        <div className="flex justify-around py-2">
+          <button
+            onClick={() => setCurrentPage('命盘显示')}
+            className={`flex flex-col items-center p-2 ${currentPage === '命盘显示' ? 'text-purple-600' : 'text-gray-600'}`}
+          >
+            <span className="text-lg">📊</span>
+            <span className="text-xs">命盘</span>
+          </button>
+          <button
+            onClick={() => setCurrentPage('AI 命理师')}
+            className={`flex flex-col items-center p-2 ${currentPage === 'AI 命理师' ? 'text-purple-600' : 'text-gray-600'}`}
+          >
+            <span className="text-lg">🤖</span>
+            <span className="text-xs">AI</span>
+          </button>
+          <button
+            onClick={() => setCurrentPage('RAG 测试')}
+            className={`flex flex-col items-center p-2 ${currentPage === 'RAG 测试' ? 'text-purple-600' : 'text-gray-600'}`}
+          >
+            <span className="text-lg">🔍</span>
+            <span className="text-xs">RAG</span>
+          </button>
+        </div>
       </div>
     </div>
   );
