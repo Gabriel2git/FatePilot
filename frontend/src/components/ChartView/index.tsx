@@ -83,7 +83,7 @@ export default function ChartView({
   };
 
   return (
-    <div className="max-w-6xl mx-auto h-full overflow-y-auto">
+    <div className="max-w-6xl mx-auto h-full overflow-y-auto pb-16 md:pb-0">
       {ziweiData && birthData ? (
         <>
           <div className="bg-white dark:bg-[#1a2a2a] rounded-2xl shadow-2xl p-8">

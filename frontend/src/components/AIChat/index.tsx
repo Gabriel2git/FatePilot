@@ -50,7 +50,7 @@ export default function AIChat({
   stopGeneration
 }: AIChatProps) {
   return (
-    <div className="h-full flex flex-col relative">
+    <div className="h-full flex flex-col relative pb-16 md:pb-0">
       <div className="flex justify-between items-center mb-2 sm:mb-4">
         <h2 className="text-sm sm:text-xl font-bold text-gray-900 dark:text-gray-100">🤖 AI 命理师</h2>
         <div className="flex gap-2">
@@ -107,7 +107,7 @@ export default function AIChat({
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[85%] sm:max-w-[80%] p-2 sm:p-4 rounded-xl sm:rounded-2xl text-sm sm:text-base ${
+                  className={`max-w-[85%] sm:max-w-[80%] p-2 sm:p-4 rounded-xl sm:rounded-2xl text-xs sm:text-base ${
                     message.role === 'user'
                       ? 'bg-purple-600 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
