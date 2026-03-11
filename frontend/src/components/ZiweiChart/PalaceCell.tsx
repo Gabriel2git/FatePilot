@@ -49,15 +49,15 @@ export default function PalaceCell({ palace, horoscope, earthlyBranchOfBodyPalac
   const yearlyPalace = getDynamicPalaceName(palace.earthlyBranch, horoscope?.yearly?.earthlyBranch);
 
   return (
-    <div className={`w-full h-full p-1 sm:p-1.5 flex flex-col justify-between
-      ${isCurrentDecadal ? 'ring-2 ring-blue-500 bg-blue-50' : ''}
-      ${isCurrentYearly ? 'ring-2 ring-red-500 bg-red-50' : ''}
+    <div className={`w-full h-full p-0.5 sm:p-1.5 flex flex-col justify-between border border-gray-600 dark:border-gray-500 bg-white dark:bg-[#1a2a2a]
+      ${isCurrentDecadal ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/30' : ''}
+      ${isCurrentYearly ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-900/30' : ''}
     `}>
       
       {/* 顶部：星曜区 (权重最高) */}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-0.5">
         {/* 主星单独一行，即使没有主星也要空出位置 */}
-        <div className="flex flex-wrap gap-1 content-start min-h-[1.25rem]">
+        <div className="flex flex-wrap gap-0.5 content-start">
           {palace.majorStars?.map((star: any) => {
             // 1. 本命生年四化 (后端直接下发)
             const birthSiHua = star.mutagen; // 如 '禄'
@@ -67,30 +67,30 @@ export default function PalaceCell({ palace, horoscope, earthlyBranchOfBodyPalac
             const yearlySiHua = getDynamicSiHua(star.name, yearlyStem);
             
             return (
-              <div key={star.name} className="flex items-center flex-wrap gap-1">
-                <span className="text-red-700 dark:text-red-400 font-bold text-sm sm:text-lg leading-tight">{star.name}</span>
-                {/* 亮度 */}
-                {star.brightness && <span className="text-xs text-gray-500">{star.brightness}</span>}
-                
+              <div key={star.name} className="flex items-center flex-wrap gap-0.5">
+                <span className="text-red-700 dark:text-red-400 font-bold text-[9px] sm:text-base leading-tight">{star.name}</span>
+                {/* 亮度 - 超小字体 */}
+                {star.brightness && <span className="text-[7px] sm:text-xs text-gray-500">{star.brightness}</span>}
+
                 {/* 视觉层：用不同的底色区分三代四化，形成视觉阶梯 */}
-                
+
                 {/* 生年四化：经典黄底红字 */}
                 {birthSiHua && (
-                  <span className="text-xs sm:text-sm font-bold bg-yellow-200 dark:bg-yellow-800 text-red-600 dark:text-red-300 px-1 rounded border border-red-200">
-                    生{birthSiHua}
+                  <span className="text-[7px] sm:text-xs font-bold bg-yellow-200 dark:bg-yellow-800 text-red-600 dark:text-red-300 px-0.5 rounded">
+                    {birthSiHua}
                   </span>
                 )}
 
-                {/* 大限四化：沉稳蓝底白字/蓝字 */}
+                {/* 大限四化 */}
                 {decadalSiHua && (
-                  <span className="text-xs sm:text-sm font-bold bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-1 rounded border border-blue-200">
+                  <span className="text-[7px] sm:text-xs font-bold bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-0.5 rounded">
                     限{decadalSiHua}
                   </span>
                 )}
 
-                {/* 流年四化：醒目紫/粉底白字 */}
+                {/* 流年四化 */}
                 {yearlySiHua && (
-                  <span className="text-xs sm:text-sm font-bold bg-fuchsia-100 dark:bg-fuchsia-900 text-fuchsia-700 dark:text-fuchsia-300 px-1 rounded border border-fuchsia-200">
+                  <span className="text-[7px] sm:text-xs font-bold bg-fuchsia-100 dark:bg-fuchsia-900 text-fuchsia-700 dark:text-fuchsia-300 px-0.5 rounded">
                     流{yearlySiHua}
                   </span>
                 )}
@@ -98,8 +98,8 @@ export default function PalaceCell({ palace, horoscope, earthlyBranchOfBodyPalac
             );
           })}
         </div>
-        {/* 辅星放在主星下一行 */}
-        <div className="flex flex-wrap gap-1 content-start">
+        {/* 辅星放在主星下一行 - 超小字体 */}
+        <div className="flex flex-wrap gap-0.5 content-start">
           {palace.minorStars?.map((star: any) => {
             // 1. 本命生年四化 (后端直接下发)
             const birthSiHua = star.mutagen; // 如 '禄'
@@ -107,32 +107,32 @@ export default function PalaceCell({ palace, horoscope, earthlyBranchOfBodyPalac
             const decadalSiHua = getDynamicSiHua(star.name, decadalStem);
             // 3. 动态流年四化 (前端推算)
             const yearlySiHua = getDynamicSiHua(star.name, yearlyStem);
-            
+
             return (
-              <div key={star.name} className="flex items-center flex-wrap gap-1">
-                <span className="text-blue-700 dark:text-blue-400 text-xs sm:text-md leading-tight">{star.name}</span>
+              <div key={star.name} className="flex items-center flex-wrap gap-0.5">
+                <span className="text-blue-700 dark:text-blue-400 text-[8px] sm:text-sm leading-tight">{star.name}</span>
                 {/* 亮度 */}
-                {star.brightness && <span className="text-xs text-gray-500">{star.brightness}</span>}
-                
+                {star.brightness && <span className="text-[7px] sm:text-xs text-gray-500">{star.brightness}</span>}
+
                 {/* 视觉层：用不同的底色区分三代四化，形成视觉阶梯 */}
-                
+
                 {/* 生年四化：经典黄底红字 */}
                 {birthSiHua && (
-                  <span className="text-xs sm:text-sm font-bold bg-yellow-200 dark:bg-yellow-800 text-red-600 dark:text-red-300 px-1 rounded border border-red-200">
-                    生{birthSiHua}
+                  <span className="text-[7px] sm:text-xs font-bold bg-yellow-200 dark:bg-yellow-800 text-red-600 dark:text-red-300 px-0.5 rounded">
+                    {birthSiHua}
                   </span>
                 )}
 
-                {/* 大限四化：沉稳蓝底白字/蓝字 */}
+                {/* 大限四化 */}
                 {decadalSiHua && (
-                  <span className="text-xs sm:text-sm font-bold bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-1 rounded border border-blue-200">
+                  <span className="text-[7px] sm:text-xs font-bold bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-0.5 rounded">
                     限{decadalSiHua}
                   </span>
                 )}
 
-                {/* 流年四化：醒目紫/粉底白字 */}
+                {/* 流年四化 */}
                 {yearlySiHua && (
-                  <span className="text-xs sm:text-sm font-bold bg-fuchsia-100 dark:bg-fuchsia-900 text-fuchsia-700 dark:text-fuchsia-300 px-1 rounded border border-fuchsia-200">
+                  <span className="text-[7px] sm:text-xs font-bold bg-fuchsia-100 dark:bg-fuchsia-900 text-fuchsia-700 dark:text-fuchsia-300 px-0.5 rounded">
                     流{yearlySiHua}
                   </span>
                 )}
@@ -142,14 +142,14 @@ export default function PalaceCell({ palace, horoscope, earthlyBranchOfBodyPalac
         </div>
       </div>
 
-      {/* 中部：杂曜与神煞区 (权重中等，字号最小) */}
-      <div className="flex flex-wrap gap-1 mt-1 opacity-70 text-xs">
+      {/* 中部：杂曜与神煞区 - 超小字体 */}
+      <div className="flex flex-wrap gap-0.5 mt-0.5 opacity-70 text-[7px] sm:text-xs">
         {/* iztro data: adjectiveStars 杂曜 */}
         {palace.adjectiveStars?.map((star: any) => (
-          <div key={star.name} className="flex items-center flex-wrap gap-1">
+          <div key={star.name} className="flex items-center flex-wrap gap-0.5">
             <span className="text-gray-600 dark:text-gray-400">{star.name}</span>
             {/* 亮度 */}
-            {star.brightness && <span className="text-xs text-gray-500">{star.brightness}</span>}
+            {star.brightness && <span className="text-[7px] sm:text-xs text-gray-500">{star.brightness}</span>}
           </div>
         ))}
         {/* iztro data: 长生十二神、岁前十二神等 */}
@@ -158,31 +158,31 @@ export default function PalaceCell({ palace, horoscope, earthlyBranchOfBodyPalac
       </div>
 
       {/* 底部：基石区 (宫名、干支、大限) */}
-      <div className="border-t border-dashed border-gray-300 pt-1 mt-auto flex justify-between items-end">
+      <div className="border-t border-dashed border-gray-300 pt-0.5 mt-auto flex justify-between items-end">
         <div className="flex flex-col">
           {/* iztro data: decadal.range 大限岁数 */}
-          <span className="text-[8px] sm:text-[10px] text-gray-500">
+          <span className="text-[7px] sm:text-[10px] text-gray-500">
             {palace.decadal?.range?.[0]}~{palace.decadal?.range?.[1]}
           </span>
           {/* iztro data: name 宫名 (如命宫、兄弟宫) */}
-          <div className="flex items-baseline gap-1 flex-wrap">
-            <span className="text-xs sm:text-sm font-bold text-red-700 dark:text-red-400">{palace.name}</span>
-            {/* 大限宫名 */}
+          <div className="flex items-baseline gap-0.5 flex-wrap">
+            <span className="text-[10px] sm:text-sm font-bold text-red-700 dark:text-red-400">{palace.name}</span>
+            {/* 大限宫名 - 手机端隐藏 */}
             {decadalPalace && (
-              <span className="text-[8px] sm:text-xs text-green-600 dark:text-green-400">
+              <span className="hidden sm:inline text-[8px] sm:text-xs text-green-600 dark:text-green-400">
                 大{decadalPalace.substring(0, 2)}
               </span>
             )}
-            {/* 流年宫名 */}
+            {/* 流年宫名 - 手机端隐藏 */}
             {yearlyPalace && (
-              <span className="text-[8px] sm:text-xs text-blue-500 dark:text-blue-400">
+              <span className="hidden sm:inline text-[8px] sm:text-xs text-blue-500 dark:text-blue-400">
                 年{yearlyPalace.substring(0, 2)}
               </span>
             )}
             {/* 身宫标识 */}
             {isBodyPalace && (
-              <span className="text-[8px] sm:text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 px-1 py-0.5 rounded">
-                [身宫]
+              <span className="text-[7px] sm:text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 px-0.5 rounded">
+                身
               </span>
             )}
           </div>
@@ -191,11 +191,11 @@ export default function PalaceCell({ palace, horoscope, earthlyBranchOfBodyPalac
         <div className="flex flex-col items-end">
           {/* 来因宫标识 */}
           {isOriginPalace && (
-            <span className="text-[8px] sm:text-xs bg-red-600 text-white px-1 py-0.5 rounded mb-1">
-              [来因]
+            <span className="text-[7px] sm:text-xs bg-red-600 text-white px-0.5 rounded mb-0.5">
+              因
             </span>
           )}
-          <span className="text-sm sm:text-lg font-bold text-blue-800 dark:text-blue-400">
+          <span className="text-xs sm:text-lg font-bold text-blue-800 dark:text-blue-400">
             {palace.heavenlyStem}{palace.earthlyBranch}
           </span>
         </div>

@@ -245,10 +245,16 @@ export default function ChartView({
         </>
       ) : (
         <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
-          <div className="animate-pulse mb-2">
-            ←
+          {/* 动态箭头引导 */}
+          <div className="mb-6 flex flex-col items-center">
+            <div className="animate-bounce">
+              <svg className="w-16 h-16 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </div>
+            <span className="text-sm text-purple-500 mt-2 font-medium">点击左上角菜单开始排盘</span>
           </div>
-          <p>请在左侧输入出生信息开始排盘</p>
+          <p className="text-lg">请在左侧输入出生信息开始排盘</p>
           <p className="mt-2 text-sm opacity-75">按F11全屏浏览效果更佳</p>
         </div>
       )}

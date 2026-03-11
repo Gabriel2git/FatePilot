@@ -32,7 +32,7 @@ export default function ZiweiChart(props: ZiweiChartProps) {
   return React.createElement(
     'div',
     {
-      className: 'w-full max-w-4xl aspect-square md:aspect-auto md:h-[680px] grid grid-cols-4 grid-rows-4 gap-[1px] bg-gray-800 border-2 border-gray-800 mx-auto'
+      className: 'w-full h-full max-h-[500px] grid grid-cols-4 grid-rows-4 gap-0 bg-gray-800 dark:bg-gray-700 border-2 border-gray-800 dark:border-gray-700 mx-auto'
     },
     EARTHLY_BRANCHES.map((branch) => {
       const palaceData = palaces.find((p: any) => p.earthlyBranch === branch);

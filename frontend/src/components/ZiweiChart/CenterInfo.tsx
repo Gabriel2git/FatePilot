@@ -9,7 +9,7 @@ interface CenterInfoProps {
 export default function CenterInfo({ astrolabe, horoscope }: CenterInfoProps) {
   return (
     <div className="w-full h-full p-4 flex flex-col items-center justify-center border-4 border-double border-gray-300 dark:border-gray-600">
-      <h2 className="text-2xl font-bold text-purple-800 dark:text-purple-400 tracking-widest mb-4" style={{ fontFamily: 'SimSun, serif' }}>
+      <h2 className="text-[10px] sm:text-base font-bold text-purple-800 dark:text-purple-400 tracking-widest mb-2 sm:mb-4" style={{ fontFamily: 'SimSun, serif' }}>
         紫微斗数
       </h2>
 
