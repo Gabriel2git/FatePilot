@@ -20,6 +20,7 @@ export function useAIChat(ziweiData: ZiweiData | null, horoscopeYear: number) {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
@@ -72,6 +73,9 @@ export function useAIChat(ziweiData: ZiweiData | null, horoscopeYear: number) {
     setInputMessage('');
     setIsLoading(true);
 
+    // 创建 AbortController
+    abortControllerRef.current = new AbortController();
+
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
 
     try {
@@ -86,7 +90,7 @@ export function useAIChat(ziweiData: ZiweiData | null, horoscopeYear: number) {
       ];
 
       console.log('调用LLM API:', model);
-      const stream = await getLLMResponse(dynamicMessages, model);
+      const stream = await getLLMResponse(dynamicMessages, model, abortControllerRef.current.signal);
       if (!stream) throw new Error('Failed to get response stream');
       
       console.log('获取流读取器');
@@ -153,23 +157,39 @@ export function useAIChat(ziweiData: ZiweiData | null, horoscopeYear: number) {
       }
 
     } catch (error) {
-      console.error('AI 响应失败:', error);
-      setMessages(prev => {
-        // 确保不会尝试删除不存在的消息
-        const updatedMessages = [...prev];
-        if (updatedMessages.length > newMessages.length) {
-          updatedMessages[newMessages.length] = {
-            role: 'assistant',
-            content: `抱歉，AI 服务调用失败。请确保环境变量配置正确或稍后重试。\n\n错误详情: ${error instanceof Error ? error.message : '未知错误'}`
-          };
-        } else {
-          updatedMessages.push({
-            role: 'assistant',
-            content: `抱歉，AI 服务调用失败。请确保环境变量配置正确或稍后重试。\n\n错误详情: ${error instanceof Error ? error.message : '未知错误'}`
-          });
-        }
-        return updatedMessages;
-      });
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('用户终止了生成');
+        // 添加提示消息表示已终止
+        setMessages(prev => {
+          const updatedMessages = [...prev];
+          if (updatedMessages.length > newMessages.length) {
+            const currentContent = updatedMessages[newMessages.length].content;
+            updatedMessages[newMessages.length] = {
+              role: 'assistant',
+              content: currentContent + '\n\n[用户已终止生成]'
+            };
+          }
+          return updatedMessages;
+        });
+      } else {
+        console.error('AI 响应失败:', error);
+        setMessages(prev => {
+          // 确保不会尝试删除不存在的消息
+          const updatedMessages = [...prev];
+          if (updatedMessages.length > newMessages.length) {
+            updatedMessages[newMessages.length] = {
+              role: 'assistant',
+              content: `抱歉，AI 服务调用失败。请确保环境变量配置正确或稍后重试。\n\n错误详情: ${error instanceof Error ? error.message : '未知错误'}`
+            };
+          } else {
+            updatedMessages.push({
+              role: 'assistant',
+              content: `抱歉，AI 服务调用失败。请确保环境变量配置正确或稍后重试。\n\n错误详情: ${error instanceof Error ? error.message : '未知错误'}`
+            });
+          }
+          return updatedMessages;
+        });
+      }
     } finally {
       console.log('释放流读取器');
       if (reader) {
@@ -181,6 +201,13 @@ export function useAIChat(ziweiData: ZiweiData | null, horoscopeYear: number) {
       }
       console.log('重置isLoading状态');
       setIsLoading(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const stopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
   };
 
@@ -241,6 +268,7 @@ export function useAIChat(ziweiData: ZiweiData | null, horoscopeYear: number) {
     updateChatForHoroscope,
     sendMessage,
     saveChatHistory,
-    loadChatHistory
+    loadChatHistory,
+    stopGeneration
   };
 }

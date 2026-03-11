@@ -538,7 +538,7 @@ async function fetchRAGContext(query: string): Promise<string> {
   }
 }
 
-async function getLLMResponse(messages: Message[], model: string = 'qwen3.5-flash'): Promise<ReadableStream<Uint8Array> | null> {
+async function getLLMResponse(messages: Message[], model: string = 'qwen3.5-flash', signal?: AbortSignal): Promise<ReadableStream<Uint8Array> | null> {
   const apiKey = process.env.NEXT_PUBLIC_DASHSCOPE_API_KEY;
   const baseUrl = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
 
@@ -599,7 +599,8 @@ async function getLLMResponse(messages: Message[], model: string = 'qwen3.5-flas
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      signal
     });
 
     console.log('API响应状态:', response.status);

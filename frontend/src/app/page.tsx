@@ -110,7 +110,8 @@ export default function Home() {
     updateChatForHoroscope,
     sendMessage,
     saveChatHistory,
-    loadChatHistory
+    loadChatHistory,
+    stopGeneration
   } = useAIChat(ziweiData, horoscopeYear);
   const { savedCases, saveCase, deleteCase } = useSavedCases();
 
@@ -299,6 +300,7 @@ export default function Home() {
                 onPersonaChange={setSelectedPersona}
                 ziweiData={ziweiData}
                 initializeChat={initializeChat}
+                stopGeneration={stopGeneration}
               />
             </div>
           ) : (

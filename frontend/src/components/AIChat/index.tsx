@@ -27,6 +27,7 @@ interface AIChatProps {
   onKeyPress: (e: React.KeyboardEvent) => void;
   onSaveHistory: () => void;
   onLoadHistory: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  stopGeneration: () => void;
 }
 
 export default function AIChat({
@@ -45,34 +46,47 @@ export default function AIChat({
   onSendMessage,
   onKeyPress,
   onSaveHistory,
-  onLoadHistory
+  onLoadHistory,
+  stopGeneration
 }: AIChatProps) {
   return (
     <div className="h-full flex flex-col relative">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">🤖 AI 命理师</h2>
         <div className="flex gap-2">
-          <button
-            onClick={onSaveHistory}
-            className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
-          >
-            💾 导出
-          </button>
-          <label className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors cursor-pointer">
-            📂 导入
-            <input
-              type="file"
-              accept=".json"
-              onChange={onLoadHistory}
-              className="hidden"
-            />
-          </label>
-          <button
-            onClick={() => setShowDebug(!showDebug)}
-            className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors"
-          >
-            🐛 调试
-          </button>
+          {isLoading ? (
+            <button
+              onClick={stopGeneration}
+              className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors flex items-center gap-1"
+            >
+              <span>⏹️</span>
+              <span>终止</span>
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={onSaveHistory}
+                className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
+              >
+                💾 导出
+              </button>
+              <label className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors cursor-pointer">
+                📂 导入
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={onLoadHistory}
+                  className="hidden"
+                />
+              </label>
+              <button
+                onClick={() => setShowDebug(!showDebug)}
+                className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors"
+              >
+                🐛 调试
+              </button>
+            </>
+          )}
         </div>
       </div>
 

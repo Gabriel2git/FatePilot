@@ -29,6 +29,7 @@ interface AIFortuneTellerProps {
   onPersonaChange: (persona: PersonaType) => void;
   ziweiData: any;
   initializeChat: (ziweiData: any, persona?: PersonaType) => void;
+  stopGeneration: () => void;
 }
 
 // 内部组件，在 AuthProvider 内使用
@@ -54,6 +55,7 @@ function AIFortuneTellerContent({
   onPersonaChange,
   ziweiData,
   initializeChat,
+  stopGeneration,
 }: AIFortuneTellerProps) {
   const { isAuthenticated } = useAuth();
   const [currentView, setCurrentView] = useState<'select-persona' | 'chat'>('select-persona');
@@ -133,6 +135,7 @@ function AIFortuneTellerContent({
           onKeyPress={onKeyPress}
           onSaveHistory={onSaveHistory}
           onLoadHistory={onLoadHistory}
+          stopGeneration={stopGeneration}
         />
       </div>
     </div>
