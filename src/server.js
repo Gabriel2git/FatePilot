@@ -1,4 +1,4 @@
-const http = require('http');
+﻿const http = require('http');
 const path = require('path');
 const iztro = require('iztro');
 const RetrievalService = require('../backend/services/retrievalService');
@@ -8,6 +8,9 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 const port = 3001;
+const CURRENT_BASELINE_YEAR = 2026;
+const MIN_YEAR = 1900;
+const MAX_YEAR = 2100;
 
 console.log('=== Server Start ===');
 console.log('NODE_ENV:', process.env.NODE_ENV);
@@ -33,6 +36,168 @@ function parseRequestBody(req) {
   });
 }
 
+function safeJsonStringify(payload) {
+  const seen = new WeakSet();
+  try {
+    return JSON.stringify(payload, (key, value) => {
+      if (typeof value === 'function') {
+        return undefined;
+      }
+      if (value && typeof value === 'object') {
+        if (seen.has(value)) {
+          return undefined;
+        }
+        seen.add(value);
+      }
+      return value;
+    });
+  } catch (error) {
+    console.error('[safe_json_stringify_error]', error);
+    return JSON.stringify({ error: 'serialization_failed' });
+  }
+}
+
+function sendJson(res, statusCode, payload) {
+  res.statusCode = statusCode;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(safeJsonStringify(payload));
+}
+
+function pickPrimitiveFields(source, keys) {
+  const output = {};
+  if (!source || typeof source !== 'object') return output;
+  for (const key of keys) {
+    const value = source[key];
+    if (value !== undefined && (value === null || ['string', 'number', 'boolean'].includes(typeof value))) {
+      output[key] = value;
+    }
+  }
+  return output;
+}
+
+function serializeStar(star) {
+  if (!star || typeof star !== 'object') return undefined;
+  const output = pickPrimitiveFields(star, ['name', 'brightness', 'mutagen', 'type', 'scope']);
+  return Object.keys(output).length ? output : undefined;
+}
+
+function serializeStars(stars) {
+  if (!Array.isArray(stars)) return [];
+  return stars.map((star) => serializeStar(star)).filter(Boolean);
+}
+
+function serializeDecadal(decadal) {
+  if (!decadal || typeof decadal !== 'object') return undefined;
+  const output = pickPrimitiveFields(decadal, ['heavenlyStem', 'earthlyBranch']);
+  if (Array.isArray(decadal.range) && decadal.range.length === 2) {
+    output.range = [decadal.range[0], decadal.range[1]];
+  }
+  if (Array.isArray(decadal.mutagen)) {
+    output.mutagen = decadal.mutagen.filter((item) => typeof item === 'string');
+  }
+  return Object.keys(output).length ? output : undefined;
+}
+
+function serializePalace(palace) {
+  if (!palace || typeof palace !== 'object') return undefined;
+  const output = pickPrimitiveFields(palace, [
+    'index',
+    'name',
+    'isBodyPalace',
+    'isOriginalPalace',
+    'heavenlyStem',
+    'earthlyBranch',
+    'changsheng12',
+    'boshi12',
+    'jiangqian12',
+    'suiqian12',
+  ]);
+
+  output.majorStars = serializeStars(palace.majorStars);
+  output.minorStars = serializeStars(palace.minorStars);
+  output.adjectiveStars = serializeStars(palace.adjectiveStars);
+
+  const decadal = serializeDecadal(palace.decadal);
+  if (decadal) output.decadal = decadal;
+
+  if (Array.isArray(palace.ages)) {
+    output.ages = palace.ages.filter((age) => typeof age === 'number');
+  }
+
+  return output;
+}
+
+function serializeAstrolabe(astrolabe) {
+  if (!astrolabe || typeof astrolabe !== 'object') return {};
+  const output = pickPrimitiveFields(astrolabe, [
+    'gender',
+    'solarDate',
+    'lunarDate',
+    'chineseDate',
+    'time',
+    'timeRange',
+    'sign',
+    'zodiac',
+    'earthlyBranchOfBodyPalace',
+    'earthlyBranchOfSoulPalace',
+    'soul',
+    'body',
+    'fiveElementsClass',
+    'copyright',
+  ]);
+
+  output.palaces = Array.isArray(astrolabe.palaces)
+    ? astrolabe.palaces.map((palace) => serializePalace(palace)).filter(Boolean)
+    : [];
+
+  return output;
+}
+
+function serializeHoroscopeSection(section) {
+  if (!section || typeof section !== 'object') return undefined;
+
+  const output = {};
+  for (const [key, value] of Object.entries(section)) {
+    if (key === 'astrolabe' || typeof value === 'function' || value === undefined) {
+      continue;
+    }
+    if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) {
+      output[key] = value;
+      continue;
+    }
+    if (Array.isArray(value) && value.every((item) => item === null || ['string', 'number', 'boolean'].includes(typeof item))) {
+      output[key] = value;
+    }
+  }
+
+  return Object.keys(output).length ? output : undefined;
+}
+
+function serializeAge(age) {
+  if (!age || typeof age !== 'object') return undefined;
+  const output = {};
+  for (const [key, value] of Object.entries(age)) {
+    if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) {
+      output[key] = value;
+    }
+  }
+  return Object.keys(output).length ? output : undefined;
+}
+
+function serializeHoroscope(horoscope) {
+  if (!horoscope || typeof horoscope !== 'object') return {};
+  const output = pickPrimitiveFields(horoscope, ['lunarDate', 'solarDate']);
+
+  output.age = serializeAge(horoscope.age);
+  output.decadal = serializeHoroscopeSection(horoscope.decadal);
+  output.yearly = serializeHoroscopeSection(horoscope.yearly);
+  output.monthly = serializeHoroscopeSection(horoscope.monthly);
+  output.daily = serializeHoroscopeSection(horoscope.daily);
+  output.hourly = serializeHoroscopeSection(horoscope.hourly);
+
+  return output;
+}
+
 function getLifePalaceGanzhiFromHoroscope(astrolabe, horoscope) {
   const yearlyPalaceNames = horoscope?.yearly?.palaceNames;
   if (!Array.isArray(yearlyPalaceNames)) return '';
@@ -45,7 +210,7 @@ function getLifePalaceGanzhiFromHoroscope(astrolabe, horoscope) {
 
 function getCurrentDecadalRange(astrolabe, horoscope) {
   const decadalBranch = horoscope?.decadal?.earthlyBranch;
-  const decadalPalace = astrolabe?.palaces?.find((p) => p.earthlyBranch === decadalBranch);
+  const decadalPalace = astrolabe?.palaces?.find((palace) => palace.earthlyBranch === decadalBranch);
   return decadalPalace?.decadal?.range;
 }
 
@@ -73,9 +238,7 @@ function buildDecadalYearlyInfo(astrolabe, targetYear, horoscope) {
       decadalEarthlyBranch: yearlyHoroscope?.decadal?.earthlyBranch || '',
       yearlyEarthlyBranch: yearlyHoroscope?.yearly?.earthlyBranch || '',
       overlap:
-        yearlyHoroscope?.decadal?.earthlyBranch === yearlyHoroscope?.yearly?.earthlyBranch
-          ? '同宫'
-          : '无',
+        yearlyHoroscope?.decadal?.earthlyBranch === yearlyHoroscope?.yearly?.earthlyBranch ? '同宫' : '无',
     });
   }
 
@@ -84,6 +247,84 @@ function buildDecadalYearlyInfo(astrolabe, targetYear, horoscope) {
     ageRange: [startAge, endAge],
     years,
   };
+}
+
+function sortPalacesByDecadal(astrolabe) {
+  if (!Array.isArray(astrolabe?.palaces)) return [];
+  return astrolabe.palaces
+    .filter((palace) => Array.isArray(palace?.decadal?.range))
+    .map((palace) => ({
+      palace,
+      startAge: Number(palace.decadal.range[0]),
+      endAge: Number(palace.decadal.range[1]),
+    }))
+    .sort((a, b) => a.startAge - b.startAge);
+}
+
+function buildPromptDecadalBlocks(astrolabe, referenceYear, referenceHoroscope, blockCount = 6) {
+  const nominalAge = referenceHoroscope?.age?.nominalAge;
+  if (typeof nominalAge !== 'number') return [];
+
+  const sorted = sortPalacesByDecadal(astrolabe).slice(0, blockCount);
+  return sorted.map((item, index) => {
+    const { palace, startAge, endAge } = item;
+    const startYear = referenceYear - (nominalAge - startAge);
+    const endYear = startYear + (endAge - startAge);
+    const years = [];
+
+    for (let year = startYear; year <= endYear; year += 1) {
+      const yearlyHoroscope = astrolabe.horoscope(`${year}-01-01`);
+      years.push({
+        year,
+        yearGanzhi: `${yearlyHoroscope?.yearly?.heavenlyStem || ''}${yearlyHoroscope?.yearly?.earthlyBranch || ''}`,
+        nominalAge: yearlyHoroscope?.age?.nominalAge ?? null,
+        lifePalaceGanzhi: getLifePalaceGanzhiFromHoroscope(astrolabe, yearlyHoroscope),
+        yearlyMutagen: yearlyHoroscope?.yearly?.mutagen || [],
+      });
+    }
+
+    const firstYearHoroscope = astrolabe.horoscope(`${startYear}-01-01`);
+
+    return {
+      index: index + 1,
+      decadalGanzhi: `${palace?.heavenlyStem || ''}${palace?.earthlyBranch || ''}`,
+      decadalRange: [startAge, endAge],
+      yearRange: [startYear, endYear],
+      decadalMutagen: firstYearHoroscope?.decadal?.mutagen || [],
+      years,
+    };
+  });
+}
+
+function buildSelectedContext(targetYear, horoscope, astrolabe) {
+  const decadalBranch = horoscope?.decadal?.earthlyBranch || '';
+  const decadalPalace = astrolabe?.palaces?.find((palace) => palace.earthlyBranch === decadalBranch);
+  const decadalRange = Array.isArray(decadalPalace?.decadal?.range) ? decadalPalace.decadal.range : [];
+
+  return {
+    baselineYear: CURRENT_BASELINE_YEAR,
+    targetYear,
+    nominalAge: horoscope?.age?.nominalAge ?? null,
+    decadal: {
+      heavenlyStem: horoscope?.decadal?.heavenlyStem || '',
+      earthlyBranch: decadalBranch,
+      range: decadalRange,
+      mutagen: horoscope?.decadal?.mutagen || [],
+    },
+    yearly: {
+      heavenlyStem: horoscope?.yearly?.heavenlyStem || '',
+      earthlyBranch: horoscope?.yearly?.earthlyBranch || '',
+      mutagen: horoscope?.yearly?.mutagen || [],
+    },
+  };
+}
+
+function classifyZiweiError(error) {
+  const message = String(error?.message || error || '');
+  if (/circular structure|stringify|serialize/i.test(message)) {
+    return 'serialization_error';
+  }
+  return 'iztro_calc_error';
 }
 
 const server = http.createServer(async (req, res) => {
@@ -98,9 +339,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && req.url === '/health') {
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ status: 'ok' }));
+    sendJson(res, 200, { status: 'ok' });
     return;
   }
 
@@ -110,45 +349,59 @@ const server = http.createServer(async (req, res) => {
       const { birthday, hourIndex, gender, isLunar, isLeap, targetYear } = body;
 
       if (!birthday || hourIndex === undefined || !gender) {
-        res.statusCode = 400;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'Missing required parameters' }));
+        sendJson(res, 400, { error: 'Missing required parameters' });
         return;
       }
 
       const normalizedTargetYear = targetYear === undefined ? new Date().getFullYear() : Number(targetYear);
-      if (!Number.isInteger(normalizedTargetYear) || normalizedTargetYear < 1900 || normalizedTargetYear > 2100) {
-        res.statusCode = 400;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'targetYear must be an integer between 1900 and 2100' }));
+      if (
+        !Number.isInteger(normalizedTargetYear) ||
+        normalizedTargetYear < MIN_YEAR ||
+        normalizedTargetYear > MAX_YEAR
+      ) {
+        sendJson(res, 400, { error: `targetYear must be an integer between ${MIN_YEAR} and ${MAX_YEAR}` });
         return;
       }
 
-      let astrolabe;
-      if (isLunar) {
-        astrolabe = iztro.astro.byLunar(birthday, hourIndex, gender, isLeap, true, 'zh-CN');
-      } else {
-        astrolabe = iztro.astro.bySolar(birthday, hourIndex, gender, true, 'zh-CN');
-      }
+      const astrolabeRaw = isLunar
+        ? iztro.astro.byLunar(birthday, hourIndex, gender, isLeap, true, 'zh-CN')
+        : iztro.astro.bySolar(birthday, hourIndex, gender, true, 'zh-CN');
 
-      const horoscope = astrolabe.horoscope(`${normalizedTargetYear}-01-01`);
-      const decadalYearlyInfo = buildDecadalYearlyInfo(astrolabe, normalizedTargetYear, horoscope);
+      const horoscopeRaw = astrolabeRaw.horoscope(`${normalizedTargetYear}-01-01`);
+      const decadalYearlyInfo = buildDecadalYearlyInfo(astrolabeRaw, normalizedTargetYear, horoscopeRaw);
+      const promptDecadalBlocks = buildPromptDecadalBlocks(
+        astrolabeRaw,
+        normalizedTargetYear,
+        horoscopeRaw,
+        6,
+      );
+      const selectedContext = buildSelectedContext(normalizedTargetYear, horoscopeRaw, astrolabeRaw);
 
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(
+      const payload = {
+        astrolabe: serializeAstrolabe(astrolabeRaw),
+        horoscope: serializeHoroscope(horoscopeRaw),
+        targetYear: normalizedTargetYear,
+        decadalYearlyInfo,
+        promptDecadalBlocks,
+        selectedContext,
+      };
+
+      console.log(
+        '[ziwei_api_success]',
         JSON.stringify({
-          astrolabe,
-          horoscope,
           targetYear: normalizedTargetYear,
-          decadalYearlyInfo,
+          hasPalaces: Array.isArray(payload.astrolabe?.palaces),
+          palaceCount: payload.astrolabe?.palaces?.length || 0,
+          hasHoroscopeAge: typeof payload.horoscope?.age?.nominalAge === 'number',
+          promptDecadalBlocks: payload.promptDecadalBlocks?.length || 0,
         }),
       );
+
+      sendJson(res, 200, payload);
     } catch (error) {
-      console.error('Ziwei API error:', error);
-      res.statusCode = 500;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ error: error.message }));
+      const errorType = classifyZiweiError(error);
+      console.error(`[ziwei_api_error:${errorType}]`, error?.message || error);
+      sendJson(res, 500, { error: error?.message || 'Unknown error', errorType });
     }
     return;
   }
@@ -159,23 +412,16 @@ const server = http.createServer(async (req, res) => {
       const { query, topK = 3 } = body;
 
       if (!query) {
-        res.statusCode = 400;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'Missing query parameter' }));
+        sendJson(res, 400, { error: 'Missing query parameter' });
         return;
       }
 
       const results = await retrievalService.search(query, topK);
       const context = retrievalService.buildContext(results);
-
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ results, context }));
+      sendJson(res, 200, { results, context });
     } catch (error) {
       console.error('RAG search error:', error);
-      res.statusCode = 500;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ error: error.message }));
+      sendJson(res, 500, { error: error.message });
     }
     return;
   }
@@ -186,24 +432,17 @@ const server = http.createServer(async (req, res) => {
       const { query, topK = 3 } = body;
 
       if (!query) {
-        res.statusCode = 400;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'Missing query parameter' }));
+        sendJson(res, 400, { error: 'Missing query parameter' });
         return;
       }
 
       const results = await retrievalService.search(query, topK);
       const context = retrievalService.buildContext(results);
-      const prompt = `你是一位专业的紫微斗数命理师，根据以下资料回答用户的问题：\n\n${context}\n\n用户问题：${query}\n\n请根据上述资料，提供详细、专业的回答。`;
-
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ results, context, prompt }));
+      const prompt = `你是一位专业的紫微斗数命理师，请根据以下资料回答用户问题：\n\n${context}\n\n用户问题：${query}\n\n请提供清晰、专业、可执行的建议。`;
+      sendJson(res, 200, { results, context, prompt });
     } catch (error) {
       console.error('RAG test error:', error);
-      res.statusCode = 500;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ error: error.message }));
+      sendJson(res, 500, { error: error.message });
     }
     return;
   }
@@ -214,26 +453,18 @@ const server = http.createServer(async (req, res) => {
       const { code } = body;
 
       if (!code) {
-        res.statusCode = 400;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: '请输入邀请码' }));
+        sendJson(res, 400, { error: '请输入邀请码' });
         return;
       }
 
       if (code === process.env.AUTH_CODE) {
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ success: true, message: '验证成功' }));
+        sendJson(res, 200, { success: true, message: '验证成功' });
       } else {
-        res.statusCode = 401;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: '邀请码错误' }));
+        sendJson(res, 401, { error: '邀请码错误' });
       }
     } catch (error) {
       console.error('Verify code error:', error);
-      res.statusCode = 500;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ error: error.message }));
+      sendJson(res, 500, { error: error.message });
     }
     return;
   }

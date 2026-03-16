@@ -1,47 +1,76 @@
-export interface Star {
+﻿export interface Star {
   name: string;
   brightness?: string;
   mutagen?: string;
+  type?: string;
+  scope?: string;
+}
+
+export interface PalaceDecadal {
+  range?: [number, number];
+  heavenlyStem?: string;
+  earthlyBranch?: string;
+  mutagen?: string[];
 }
 
 export interface Palace {
+  index?: number;
   name: string;
+  isBodyPalace?: boolean;
+  isOriginalPalace?: boolean;
   heavenlyStem: string;
   earthlyBranch: string;
   majorStars?: Star[];
   minorStars?: Star[];
   adjectiveStars?: Star[];
-  decadal?: {
-    range: [number, number];
-  };
+  changsheng12?: string;
+  boshi12?: string;
+  jiangqian12?: string;
+  suiqian12?: string;
+  decadal?: PalaceDecadal;
+  ages?: number[];
 }
 
 export interface Astrolabe {
-  palaces: Palace[];
+  gender?: string;
   solarDate?: string;
   lunarDate?: string;
+  chineseDate?: string;
   time?: string;
   timeRange?: string;
+  sign?: string;
+  zodiac?: string;
+  earthlyBranchOfBodyPalace?: string;
+  earthlyBranchOfSoulPalace?: string;
   soul?: string;
   body?: string;
-  earthlyBranchOfBodyPalace?: string;
-  chineseDate?: string;
+  fiveElementsClass?: string;
+  palaces: Palace[];
+  copyright?: string;
+}
+
+export interface HoroscopeAge {
+  nominalAge?: number;
+  [key: string]: string | number | boolean | undefined;
+}
+
+export interface HoroscopeScope {
+  heavenlyStem?: string;
+  earthlyBranch?: string;
+  mutagen?: string[];
+  palaceNames?: string[];
+  [key: string]: string | number | boolean | string[] | undefined;
 }
 
 export interface Horoscope {
-  age?: {
-    nominalAge: number;
-  };
-  decadal?: {
-    heavenlyStem: string;
-    earthlyBranch: string;
-    mutagen?: string[];
-  };
-  yearly?: {
-    heavenlyStem: string;
-    earthlyBranch: string;
-    mutagen?: string[];
-  };
+  lunarDate?: string;
+  solarDate?: string;
+  age?: HoroscopeAge;
+  decadal?: HoroscopeScope;
+  yearly?: HoroscopeScope;
+  monthly?: HoroscopeScope;
+  daily?: HoroscopeScope;
+  hourly?: HoroscopeScope;
 }
 
 export interface DecadalYearlyItem {
@@ -62,10 +91,46 @@ export interface DecadalYearlyInfo {
   years: DecadalYearlyItem[];
 }
 
+export interface YearlyDetail {
+  year: number;
+  yearGanzhi: string;
+  nominalAge: number | null;
+  lifePalaceGanzhi: string;
+  yearlyMutagen: string[];
+}
+
+export interface DecadalBlock {
+  index: number;
+  decadalGanzhi: string;
+  decadalRange: [number, number];
+  yearRange: [number, number];
+  decadalMutagen: string[];
+  years: YearlyDetail[];
+}
+
+export interface SelectedContext {
+  baselineYear: number;
+  targetYear: number;
+  nominalAge: number | null;
+  decadal: {
+    heavenlyStem: string;
+    earthlyBranch: string;
+    range: number[];
+    mutagen: string[];
+  };
+  yearly: {
+    heavenlyStem: string;
+    earthlyBranch: string;
+    mutagen: string[];
+  };
+}
+
 export interface ZiweiData {
   astrolabe: Astrolabe;
   horoscope?: Horoscope;
   decadalYearlyInfo?: DecadalYearlyInfo | null;
+  promptDecadalBlocks?: DecadalBlock[];
+  selectedContext?: SelectedContext;
   originalTime?: {
     hour: number;
     minute: number;

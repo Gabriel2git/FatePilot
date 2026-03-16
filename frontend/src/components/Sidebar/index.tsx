@@ -1,8 +1,7 @@
-import BirthForm from '@/components/BirthForm';
+﻿import BirthForm from '@/components/BirthForm';
 import { AI_MODELS } from '@/lib/ai';
 
-// 扩展页面类型
-type PageType = '命盘显示' | 'AI 命理师' | 'RAG 测试';
+export type PageType = 'chart' | 'ai' | 'rag';
 
 interface SidebarProps {
   currentPage: PageType;
@@ -21,15 +20,12 @@ export default function Sidebar({
   setSelectedModel,
   darkMode,
   toggleDarkMode,
-  onDataLoaded
+  onDataLoaded,
 }: SidebarProps) {
   return (
     <aside className="w-full bg-white dark:bg-[#1a2a2a] shadow-xl p-4 lg:p-5 flex flex-col h-full overflow-y-auto">
-      {/* 桌面端显示标题，移动端隐藏（已在 page.tsx 顶部显示） */}
-      <div className="hidden md:flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-purple-700 dark:text-purple-400">
-          🟣 AI 紫微斗数 Pro
-        </h1>
+      <div className="hidden md:flex justify-between items-center mb-5">
+        <h1 className="text-2xl font-bold text-purple-700 dark:text-purple-400">AI 紫微斗数 Pro</h1>
         <button
           onClick={toggleDarkMode}
           className="p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
@@ -39,45 +35,49 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* 移动端显示设置标题 */}
-      <div className="md:hidden mb-4">
-        <h2 className="text-lg font-bold text-purple-700 dark:text-purple-400">
-          设置
-        </h2>
+      <div className="mb-4 md:mb-5">
+        <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-gray-100 tracking-wide">菜单</h2>
       </div>
 
-      {/* 桌面端导航按钮，移动端隐藏（使用底部导航） */}
-      <div className="hidden md:block mb-6 space-y-2">
+      <div className="hidden md:block mb-4 space-y-2">
         <button
-          onClick={() => setCurrentPage('命盘显示')}
+          onClick={() => setCurrentPage('chart')}
           className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
-            currentPage === '命盘显示'
+            currentPage === 'chart'
               ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 font-semibold'
               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
         >
-          📊 命盘显示
+          命盘显示
         </button>
         <button
-          onClick={() => setCurrentPage('AI 命理师')}
+          onClick={() => setCurrentPage('ai')}
           className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
-            currentPage === 'AI 命理师'
+            currentPage === 'ai'
               ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 font-semibold'
               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
         >
-          🤖 AI 命理师
+          AI 命理师
         </button>
         <button
-          onClick={() => setCurrentPage('RAG 测试')}
+          onClick={() => setCurrentPage('rag')}
           className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
-            currentPage === 'RAG 测试'
+            currentPage === 'rag'
               ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 font-semibold'
               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
         >
-          🔍 RAG 测试
+          RAG 测试
         </button>
+      </div>
+
+      <div className="mb-6 rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 p-3 text-xs text-gray-700 dark:text-gray-200 leading-5">
+        <p className="font-bold mb-1">快速上手</p>
+        <p>1. 点击菜单进入设置。</p>
+        <p>2. 输入出生信息并点击开始排盘。</p>
+        <p>3. 在命盘页点击大限/流年观察边框变化。</p>
+        <p>4. 切到 AI 命理师页面开始提问。</p>
       </div>
 
       <div className="mb-6">
@@ -88,7 +88,9 @@ export default function Sidebar({
           className="w-full p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800"
         >
           {AI_MODELS.map((model) => (
-            <option key={model} value={model} className="text-gray-900 dark:text-gray-100">{model}</option>
+            <option key={model} value={model} className="text-gray-900 dark:text-gray-100">
+              {model}
+            </option>
           ))}
         </select>
       </div>
@@ -97,7 +99,7 @@ export default function Sidebar({
         <BirthForm
           onDataLoaded={(data) => {
             onDataLoaded(data);
-            setCurrentPage('命盘显示'); // 自动跳转到命盘页面
+            setCurrentPage('chart');
           }}
         />
       </div>

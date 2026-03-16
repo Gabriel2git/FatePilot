@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+﻿import { useState } from 'react';
 
 interface RagTestProps {
   onBack: () => void;
@@ -51,16 +51,16 @@ export default function RagTest({ onBack }: RagTestProps) {
       });
 
       if (!response.ok) {
-        throw new Error('API调用失败');
+        throw new Error('API 调用失败');
       }
 
       const data: RagTestResponse = await response.json();
-      setResults(data.results);
-      setContext(data.context);
-      setPrompt(data.prompt);
+      setResults(data.results || []);
+      setContext(data.context || '');
+      setPrompt(data.prompt || '');
     } catch (err) {
       setError('查询失败，请稍后重试');
-      console.error('RAG测试失败:', err);
+      console.error('RAG 测试失败:', err);
     } finally {
       setIsLoading(false);
     }
@@ -83,17 +83,16 @@ export default function RagTest({ onBack }: RagTestProps) {
           >
             ← 返回
           </button>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">🔍 RAG 测试窗口</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">RAG 测试窗口</h2>
         </div>
       </div>
 
-      {/* 输入区 */}
       <div className="bg-white dark:bg-[#1a2a2a] rounded-2xl shadow-2xl p-4 mb-4">
         <div className="flex gap-2">
           <textarea
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             placeholder="请输入您的问题..."
             disabled={isLoading}
             className="flex-1 p-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none resize-none text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
@@ -107,56 +106,40 @@ export default function RagTest({ onBack }: RagTestProps) {
             {isLoading ? '查询中...' : '查询'}
           </button>
         </div>
-        {error && (
-          <p className="text-xs text-red-500 mt-2 text-center">
-            {error}
-          </p>
-        )}
+        {error && <p className="text-xs text-red-500 mt-2 text-center">{error}</p>}
       </div>
 
-      {/* 结果展示区 */}
       <div className="flex-1 overflow-y-auto bg-white dark:bg-[#1a2a2a] rounded-2xl shadow-2xl p-6">
         {results.length > 0 ? (
           <div className="space-y-6">
-            {/* 检索结果 */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">检索结果</h3>
               <div className="space-y-4">
                 {results.map((result, index) => (
                   <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                     <div className="flex justify-between items-start">
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                        {result.document.fileName}
-                      </h4>
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">{result.document.fileName}</h4>
                       <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
-                        相关性: {result.relevance_score?.toFixed(2) || 'N/A'}
+                        相关性 {result.relevance_score?.toFixed(2) || 'N/A'}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-                      {result.text.substring(0, 200)}...
-                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{result.text.substring(0, 200)}...</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* 上下文 */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">生成的上下文</h3>
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
-                <pre className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
-                  {context}
-                </pre>
+                <pre className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{context}</pre>
               </div>
             </div>
 
-            {/* 生成的Prompt */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">生成的Prompt</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">生成的 Prompt</h3>
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
-                <pre className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
-                  {prompt}
-                </pre>
+                <pre className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{prompt}</pre>
               </div>
             </div>
           </div>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -32,7 +32,6 @@ interface AIFortuneTellerProps {
   stopGeneration: () => void;
 }
 
-// 内部组件，在 AuthProvider 内使用
 function AIFortuneTellerContent({
   messages,
   inputMessage,
@@ -60,25 +59,22 @@ function AIFortuneTellerContent({
   const { isAuthenticated } = useAuth();
   const [currentView, setCurrentView] = useState<'select-persona' | 'chat'>('select-persona');
 
-  // 如果未验证，显示 AuthGuard
   if (!isAuthenticated) {
     return <AuthGuard>{null}</AuthGuard>;
   }
 
-  // 选择命理师界面
   if (currentView === 'select-persona') {
     return (
       <div className="h-full flex flex-col">
         <PersonaSelector
           selectedPersona={selectedPersona}
           onPersonaChange={(persona) => {
-            // 检查是否已排盘
             if (!hasBirthData) {
               alert('请先输入出生信息并排盘，然后再选择命理师');
               return;
             }
+
             onPersonaChange(persona);
-            // 如果已有命盘数据，使用新的 persona 重新初始化聊天
             if (ziweiData) {
               initializeChat(ziweiData, persona);
             }
@@ -89,23 +85,20 @@ function AIFortuneTellerContent({
     );
   }
 
-  // AI 聊天界面
   return (
     <div className="h-full flex flex-col">
-      {/* 已选择 Persona 的提示 */}
       <div className="flex-shrink-0 mb-4 px-4 py-2 bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-900/30 dark:to-blue-900/30 rounded-lg">
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-700 dark:text-gray-300">
-            当前命理师:
+            当前命理师
             <span className="font-bold ml-2">
-              {selectedPersona === 'companion' && '🤗 大白话解盘伴侣'}
-              {selectedPersona === 'mentor' && '🎓 硬核紫微导师'}
-              {selectedPersona === 'healer' && '🌿 人生导航与疗愈师'}
+              {selectedPersona === 'companion' && '💬 大白话解盘伴侣'}
+              {selectedPersona === 'mentor' && '📘 硬核紫微导师'}
+              {selectedPersona === 'healer' && '🌱 人生导航与疗愈师'}
             </span>
           </span>
           <button
             onClick={() => {
-              // 重置聊天以允许重新选择 persona
               if (confirm('切换命理师将重新开始对话，是否继续？')) {
                 setMessages([]);
                 setCurrentView('select-persona');
@@ -117,6 +110,7 @@ function AIFortuneTellerContent({
           </button>
         </div>
       </div>
+
       <div className="flex-1 min-h-0">
         <AIChat
           messages={messages}
@@ -142,7 +136,6 @@ function AIFortuneTellerContent({
   );
 }
 
-// 主组件，提供 AuthProvider
 export default function AIFortuneTeller(props: AIFortuneTellerProps) {
   return (
     <AuthProvider>

@@ -1,16 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
-import { Message, PersonaType, getDefaultSystemPrompt, generateMasterPrompt, getLLMResponse, parseZiweiToPrompt } from '@/lib/ai';
-
-interface ZiweiData {
-  astrolabe: any;
-  horoscope?: any;
-  decadalYearlyInfo?: any;
-  originalTime?: {
-    hour: number;
-    minute: number;
-  };
-  targetYear?: number;
-}
+﻿import { useRef, useState } from 'react';
+import { Message, PersonaType, generateMasterPrompt, getDefaultSystemPrompt, getLLMResponse } from '@/lib/ai';
+import type { ZiweiData } from '@/types';
 
 export function useAIChat(ziweiData: ZiweiData | null, horoscopeYear: number) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -18,48 +8,36 @@ export function useAIChat(ziweiData: ZiweiData | null, horoscopeYear: number) {
   const [isLoading, setIsLoading] = useState(false);
   const [debugPrompt, setDebugPrompt] = useState<string>('');
   const [selectedPersona, setSelectedPersona] = useState<PersonaType>('companion');
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const scrollToBottom = () => {
-    if (messagesContainerRef.current) {
-      const container = messagesContainerRef.current;
-      container.scrollTop = container.scrollHeight;
-    }
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const initializeChat = (ziweiData: ZiweiData, persona?: PersonaType) => {
-    // 使用传入的 persona 或当前状态的 selectedPersona
+  const initializeChat = (data: ZiweiData, persona?: PersonaType) => {
     const currentPersona = persona || selectedPersona;
-    // 使用 generateMasterPrompt 生成包含 Persona 的完整 prompt
-    const fullPrompt = generateMasterPrompt('请分析我的命盘', ziweiData, horoscopeYear, currentPersona);
-    const [sysPrompt, dataContext] = parseZiweiToPrompt(ziweiData);
+    const fullPrompt = generateMasterPrompt('请分析我的命盘', data, data?.targetYear || horoscopeYear, currentPersona);
+
     setMessages([
       { role: 'system', content: fullPrompt },
-      { 
-        role: 'assistant', 
-        content: '你好！我已经完整解析了这张命盘的本命结构。\n你可以问我：\n1. **格局性格**：例如「我适合创业还是上班？」\n2. **情感婚姻**：例如「我的正缘有什么特征？」\n3. **流年运势**：例如「今年要注意什么？」' 
-      }
+      {
+        role: 'assistant',
+        content:
+          '你好，我已经读取你的命盘与当前大限/流年信息。\n你可以问我：\n1. 格局与职业\n2. 情感与关系\n3. 当前年份重点风险与机会',
+      },
     ]);
     setDebugPrompt(`=== 系统提示词 ===\n${fullPrompt}`);
   };
 
-  const updateChatForHoroscope = (ziweiData: ZiweiData) => {
-    // 使用 generateMasterPrompt 生成包含 Persona 的完整 prompt
-    const fullPrompt = generateMasterPrompt('请分析我的命盘', ziweiData, horoscopeYear, selectedPersona);
-    const [sysPrompt, dataContext] = parseZiweiToPrompt(ziweiData);
+  const updateChatForHoroscope = (data: ZiweiData) => {
+    const fullPrompt = generateMasterPrompt('请分析我的命盘', data, data?.targetYear || horoscopeYear, selectedPersona);
+
     setMessages([
       { role: 'system', content: fullPrompt },
-      { 
-        role: 'assistant', 
-        content: '你好！我已经根据你选择的大限更新了命盘分析。\n你可以问我：\n1. **格局性格**：例如「我适合创业还是上班？」\n2. **情感婚姻**：例如「我的正缘有什么特征？」\n3. **流年运势**：例如「今年要注意什么？」' 
-      }
+      {
+        role: 'assistant',
+        content:
+          '已根据你最新选择的大限/流年更新解盘上下文。你可以继续追问：\n1. 这个年份最重要的判断\n2. 事业和关系优先级\n3. 如何规避风险并执行',
+      },
     ]);
     setDebugPrompt(`=== 系统提示词 ===\n${fullPrompt}`);
   };
@@ -67,140 +45,102 @@ export function useAIChat(ziweiData: ZiweiData | null, horoscopeYear: number) {
   const sendMessage = async (model: string) => {
     if (!inputMessage.trim() || isLoading) return;
 
-    console.log('开始发送消息:', inputMessage);
     const userMessage: Message = { role: 'user', content: inputMessage };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInputMessage('');
     setIsLoading(true);
 
-    // 创建 AbortController
     abortControllerRef.current = new AbortController();
 
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
 
     try {
-      console.log('生成系统提示词, persona:', selectedPersona);
-      const systemPrompt = ziweiData 
-        ? generateMasterPrompt(inputMessage, ziweiData, horoscopeYear, selectedPersona)
+      const systemPrompt = ziweiData
+        ? generateMasterPrompt(inputMessage, ziweiData, ziweiData.targetYear || horoscopeYear, selectedPersona)
         : getDefaultSystemPrompt();
 
       const dynamicMessages: Message[] = [
         { role: 'system', content: systemPrompt },
-        ...newMessages.filter(m => m.role !== 'system')
+        ...newMessages.filter((message) => message.role !== 'system'),
       ];
 
-      console.log('调用LLM API:', model);
       const stream = await getLLMResponse(dynamicMessages, model, abortControllerRef.current.signal);
       if (!stream) throw new Error('Failed to get response stream');
-      
-      console.log('获取流读取器');
+
       reader = stream.getReader();
       const decoder = new TextDecoder();
       let aiResponseContent = '';
-      
+
       const tempMessageIndex = newMessages.length;
       setMessages([...newMessages, { role: 'assistant', content: '' }]);
-      console.log('添加空的AI响应消息');
 
-      console.log('开始处理流数据');
-      let readAttempts = 0;
-      const maxReadAttempts = 1000; // 防止无限循环
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      while (readAttempts < maxReadAttempts) {
-        console.log(`读取流数据... (尝试 ${readAttempts + 1})`);
-        readAttempts++;
-        
-        try {
-          const { done, value } = await reader.read();
-          console.log('流读取结果:', { done, value: value ? value.length : 0 });
-          
-          if (done) {
-            console.log('流处理完成');
-            break;
+        if (!value) continue;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n').filter((line) => line.trim() !== '');
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+
+          try {
+            const data = JSON.parse(line.slice(6));
+            const delta = data?.choices?.[0]?.delta?.content;
+            if (!delta) continue;
+
+            aiResponseContent += delta;
+            setMessages((prev) => {
+              const updated = [...prev];
+              updated[tempMessageIndex] = { role: 'assistant', content: aiResponseContent };
+              return updated;
+            });
+          } catch {
+            // Ignore malformed stream lines
           }
-
-          if (value) {
-            const chunk = decoder.decode(value);
-            console.log('解码后的流数据:', chunk);
-            const lines = chunk.split('\n').filter(line => line.trim() !== '');
-
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                try {
-                  const data = JSON.parse(line.slice(6));
-                  console.log('解析后的流数据:', data);
-                  if (data.choices && data.choices[0]?.delta?.content) {
-                    aiResponseContent += data.choices[0].delta.content;
-                    console.log('更新AI响应内容:', aiResponseContent);
-                    setMessages(prev => {
-                      const newMsgs = [...prev];
-                      newMsgs[tempMessageIndex] = { role: 'assistant', content: aiResponseContent };
-                      return newMsgs;
-                    });
-                  }
-                } catch (e) {
-                  console.error('解析流数据失败:', e);
-                  console.error('失败的行:', line);
-                }
-              }
-            }
-          }
-        } catch (readError) {
-          console.error('流读取失败:', readError);
-          break; // 出错时跳出循环
         }
       }
-
-      if (readAttempts >= maxReadAttempts) {
-        console.error('流读取尝试次数超过限制，可能存在无限循环');
-        throw new Error('流读取超时: 超过最大尝试次数');
-      }
-
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.log('用户终止了生成');
-        // 添加提示消息表示已终止
-        setMessages(prev => {
-          const updatedMessages = [...prev];
-          if (updatedMessages.length > newMessages.length) {
-            const currentContent = updatedMessages[newMessages.length].content;
-            updatedMessages[newMessages.length] = {
+        setMessages((prev) => {
+          const updated = [...prev];
+          const assistantIndex = newMessages.length;
+          if (updated[assistantIndex]) {
+            updated[assistantIndex] = {
               role: 'assistant',
-              content: currentContent + '\n\n[用户已终止生成]'
+              content: `${updated[assistantIndex].content}\n\n[用户已终止生成]`,
             };
           }
-          return updatedMessages;
+          return updated;
         });
       } else {
-        console.error('AI 响应失败:', error);
-        setMessages(prev => {
-          // 确保不会尝试删除不存在的消息
-          const updatedMessages = [...prev];
-          if (updatedMessages.length > newMessages.length) {
-            updatedMessages[newMessages.length] = {
-              role: 'assistant',
-              content: `抱歉，AI 服务调用失败。请确保环境变量配置正确或稍后重试。\n\n错误详情: ${error instanceof Error ? error.message : '未知错误'}`
-            };
+        setMessages((prev) => {
+          const updated = [...prev];
+          const assistantMessage = {
+            role: 'assistant' as const,
+            content: `抱歉，AI 服务调用失败。\n\n错误详情: ${error instanceof Error ? error.message : '未知错误'}`,
+          };
+
+          if (updated.length > newMessages.length) {
+            updated[newMessages.length] = assistantMessage;
           } else {
-            updatedMessages.push({
-              role: 'assistant',
-              content: `抱歉，AI 服务调用失败。请确保环境变量配置正确或稍后重试。\n\n错误详情: ${error instanceof Error ? error.message : '未知错误'}`
-            });
+            updated.push(assistantMessage);
           }
-          return updatedMessages;
+
+          return updated;
         });
       }
     } finally {
-      console.log('释放流读取器');
       if (reader) {
         try {
           reader.releaseLock();
-        } catch (e) {
-          console.error('释放流读取器失败:', e);
+        } catch {
+          // ignore
         }
       }
-      console.log('重置isLoading状态');
       setIsLoading(false);
       abortControllerRef.current = null;
     }
@@ -214,14 +154,14 @@ export function useAIChat(ziweiData: ZiweiData | null, horoscopeYear: number) {
 
   const saveChatHistory = (birthDate: string, gender: string) => {
     if (messages.length === 0) return;
-    
+
     const chatData = {
       birth_date: birthDate,
-      gender: gender,
-      messages: messages.filter(m => m.role !== 'system'),
-      timestamp: new Date().toLocaleString('zh-CN')
+      gender,
+      messages: messages.filter((message) => message.role !== 'system'),
+      timestamp: new Date().toLocaleString('zh-CN'),
     };
-    
+
     const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -244,8 +184,8 @@ export function useAIChat(ziweiData: ZiweiData | null, horoscopeYear: number) {
         if (chatData.messages) {
           setMessages(chatData.messages);
         }
-      } catch (err) {
-        console.error('加载聊天历史失败:', err);
+      } catch (error) {
+        console.error('加载聊天历史失败:', error);
         alert('聊天历史文件格式错误');
       }
     };
@@ -270,6 +210,6 @@ export function useAIChat(ziweiData: ZiweiData | null, horoscopeYear: number) {
     sendMessage,
     saveChatHistory,
     loadChatHistory,
-    stopGeneration
+    stopGeneration,
   };
 }

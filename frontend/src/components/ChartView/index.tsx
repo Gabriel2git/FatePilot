@@ -1,7 +1,6 @@
-import { useRef } from 'react';
+﻿import { useMemo, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import ZiweiChart from '@/components/ZiweiChart';
-import { getLunarBaseYear, getGregorianYearByNominalAge } from '@/lib/shichen';
 
 interface BirthData {
   birthday: string;
@@ -44,6 +43,10 @@ interface ChartViewProps {
   onTestAIPrompt?: (savedCase: SavedCase) => void;
 }
 
+function getDecadalStartYear(targetYear: number, currentNominalAge: number, decadalStartAge: number): number {
+  return targetYear - (currentNominalAge - decadalStartAge);
+}
+
 export default function ChartView({
   ziweiData,
   birthData,
@@ -58,25 +61,38 @@ export default function ChartView({
   onLoadCase,
   onDeleteCase,
   onYearChange,
-  onTestAIPrompt
+  onTestAIPrompt,
 }: ChartViewProps) {
   const chartRef = useRef<HTMLDivElement>(null);
 
-  // 导出命盘为图片
+  const decadalButtons = useMemo(() => {
+    const palaces = ziweiData?.astrolabe?.palaces || [];
+    return palaces
+      .filter((palace: any) => Array.isArray(palace?.decadal?.range) && palace.decadal.range.length === 2)
+      .map((palace: any) => ({
+        start: Number(palace.decadal.range[0]),
+        end: Number(palace.decadal.range[1]),
+        stem: palace.heavenlyStem || '',
+        branch: palace.earthlyBranch || '',
+        name: palace.name || '',
+      }))
+      .sort((a: any, b: any) => a.start - b.start);
+  }, [ziweiData?.astrolabe?.palaces]);
+
   const handleExportChart = async () => {
     if (!chartRef.current) return;
 
     try {
       const canvas = await html2canvas(chartRef.current, {
-        scale: 2, // 提高清晰度
+        scale: 2,
         useCORS: true,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
       });
 
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.href = dataUrl;
-      link.download = `紫微斗数命盘_${birthData?.birthday || Date.now()}.png`;
+      link.download = `紫微命盘_${birthData?.birthday || Date.now()}.png`;
       link.click();
     } catch (error) {
       console.error('导出命盘失败:', error);
@@ -84,89 +100,104 @@ export default function ChartView({
     }
   };
 
+  const handleSelectDecadal = (item: any) => {
+    if (!ziweiData?.horoscope?.age?.nominalAge || !ziweiData?.targetYear) {
+      return;
+    }
+
+    const decadalInfo: DecadalInfo = {
+      start: item.start,
+      end: item.end,
+      stem: item.stem,
+      branch: item.branch,
+    };
+
+    if (selectedDecadal && selectedDecadal.start === decadalInfo.start) {
+      setSelectedDecadal(null);
+      setSelectedYear(null);
+      return;
+    }
+
+    setSelectedDecadal(decadalInfo);
+
+    const firstYear = getDecadalStartYear(
+      Number(ziweiData.targetYear),
+      Number(ziweiData.horoscope.age.nominalAge),
+      Number(decadalInfo.start),
+    );
+    setSelectedYear(firstYear);
+    onYearChange?.(firstYear);
+  };
+
+  const yearsOfSelectedDecadal = useMemo(() => {
+    if (!selectedDecadal || !ziweiData?.horoscope?.age?.nominalAge || !ziweiData?.targetYear) {
+      return [] as number[];
+    }
+
+    const startYear = getDecadalStartYear(
+      Number(ziweiData.targetYear),
+      Number(ziweiData.horoscope.age.nominalAge),
+      Number(selectedDecadal.start),
+    );
+
+    const totalYears = Number(selectedDecadal.end) - Number(selectedDecadal.start) + 1;
+    return Array.from({ length: Math.max(totalYears, 0) }, (_, index) => startYear + index);
+  }, [selectedDecadal, ziweiData?.horoscope?.age?.nominalAge, ziweiData?.targetYear]);
+
   return (
     <div className="max-w-6xl mx-auto h-full overflow-y-auto pb-16 md:pb-0">
       {ziweiData && birthData ? (
         <>
-          <div className="bg-white dark:bg-[#1a2a2a] rounded-2xl shadow-2xl p-8">
+          <div className="bg-white dark:bg-[#1a2a2a] rounded-2xl shadow-2xl p-4 md:p-8">
             <div className="flex justify-center mb-6" ref={chartRef}>
-              <ZiweiChart 
+              <ZiweiChart
                 ziweiData={{
                   astrolabe: ziweiData?.astrolabe,
-                  horoscope: ziweiData?.horoscope
+                  horoscope: ziweiData?.horoscope,
                 }}
               />
             </div>
-          
+
             {ziweiData?.astrolabe && (
               <div className="mb-6">
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {ziweiData.astrolabe.palaces?.
-                    filter((palace: any) => palace.decadal?.range)
-                    .map((palace: any) => ({
-                      ...palace,
-                      startAge: palace.decadal.range[0]
-                    }))
-                    .sort((a: any, b: any) => a.startAge - b.startAge)
-                    .map((palace: any) => (
+                  {decadalButtons.map((item: any) => (
+                    <button
+                      key={`${item.stem}${item.branch}-${item.start}`}
+                      onClick={() => handleSelectDecadal(item)}
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                        selectedDecadal?.start === item.start
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                      title={`${item.name} ${item.stem}${item.branch}`}
+                    >
+                      {item.start}-{item.end}岁
+                    </button>
+                  ))}
+                </div>
+
+                {selectedDecadal && (
+                  <div className="flex flex-wrap gap-2">
+                    {yearsOfSelectedDecadal.map((year) => (
                       <button
-                        key={palace.name}
+                        key={year}
                         onClick={() => {
-                          const decadalInfo: DecadalInfo = {
-                            start: palace.decadal?.range?.[0],
-                            end: palace.decadal?.range?.[1],
-                            stem: palace.heavenlyStem,
-                            branch: palace.earthlyBranch
-                          };
-                          if (selectedDecadal && selectedDecadal.start === decadalInfo.start) {
-                            setSelectedDecadal(null);
-                            setSelectedYear(null);
-                          } else {
-                            setSelectedDecadal(decadalInfo);
-                            const baseYear = getLunarBaseYear(birthData.birthday);
-                            const firstYear = getGregorianYearByNominalAge(baseYear, Number(decadalInfo.start));
-                            setSelectedYear(firstYear);
-                            onYearChange?.(firstYear);
+                          if (selectedYear === year) {
+                            return;
                           }
+                          setSelectedYear(year);
+                          onYearChange?.(year);
                         }}
                         className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
-                          selectedDecadal?.start === palace.decadal?.range?.[0] 
-                            ? 'bg-blue-500 text-white' 
+                          selectedYear === year
+                            ? 'bg-red-500 text-white'
                             : 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
                         }`}
                       >
-                        {palace.decadal?.range?.[0]}-{palace.decadal?.range?.[1]}岁
+                        {year}
                       </button>
                     ))}
-                </div>
-                
-                {selectedDecadal && (
-                  <div className="flex flex-wrap gap-2">
-                    {Array.from({ length: 10 }, (_, index) => {
-                      const targetAge = Number(selectedDecadal.start) + index;
-                      const baseYear = getLunarBaseYear(birthData.birthday);
-                      const year = getGregorianYearByNominalAge(baseYear, targetAge);
-                      return (
-                        <button
-                          key={year}
-                          onClick={() => {
-                            if (selectedYear === year) {
-                              setSelectedYear(null);
-                            } else {
-                              setSelectedYear(year);
-                              onYearChange?.(year);
-                            }
-                          }}
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
-                            selectedYear === year 
-                              ? 'bg-red-500 text-white' 
-                              : 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
-                          }`}
-                        >
-                          {year}
-                        </button>
-                      );
-                    })}
                   </div>
                 )}
               </div>
@@ -179,19 +210,19 @@ export default function ChartView({
                 onClick={onSaveCase}
                 className="px-2 py-1 text-xs bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
               >
-                💾 保存命例
+                保存命例
               </button>
               <button
                 onClick={() => setShowSavedCases(!showSavedCases)}
                 className="px-2 py-1 text-xs bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
               >
-                📂 历史命例 ({savedCases.length})
+                历史命例 ({savedCases.length})
               </button>
               <button
                 onClick={handleExportChart}
                 className="px-2 py-1 text-xs bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
               >
-                🖼️ 导出命盘
+                导出命盘
               </button>
             </div>
 
@@ -218,12 +249,10 @@ export default function ChartView({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (onTestAIPrompt) {
-                                onTestAIPrompt(savedCase);
-                              }
+                              onTestAIPrompt?.(savedCase);
                             }}
                             className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600 transition-colors"
-                            title="将命例数据作为prompt发送给AI进行测试"
+                            title="将命例数据作为 Prompt 发送给 AI 进行测试"
                           >
                             测试AI
                           </button>
@@ -243,18 +272,22 @@ export default function ChartView({
           </div>
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
-          {/* 动态箭头引导 */}
-          <div className="mb-6 flex flex-col items-center">
-            <div className="animate-bounce">
-              <svg className="w-16 h-16 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
+        <div className="flex flex-col items-center justify-center h-full text-gray-600 dark:text-gray-300 px-6">
+          <div className="mb-6 text-center">
+            <div className="inline-flex items-center gap-2 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-4 py-2 rounded-full font-bold text-sm md:text-base">
+              <span>点击左侧菜单开始使用</span>
             </div>
-            <span className="text-sm text-purple-500 mt-2 font-medium">点击左上角菜单开始排盘</span>
           </div>
-          <p className="text-lg">请在左侧输入出生信息开始排盘</p>
-          <p className="hidden md:block mt-2 text-sm opacity-75">按F11全屏浏览效果更佳</p>
+
+          <div className="w-full max-w-2xl bg-white dark:bg-[#1a2a2a] border border-purple-200 dark:border-purple-800 rounded-2xl p-5 md:p-6 shadow-lg">
+            <h3 className="text-lg md:text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">完整使用流程</h3>
+            <ol className="list-decimal list-inside space-y-2 text-sm md:text-base text-gray-700 dark:text-gray-300">
+              <li>点击左侧菜单（桌面）或底部菜单（手机）进入设置面板。</li>
+              <li>输入出生信息后点击“开始排盘”。</li>
+              <li>在命盘页点击大限/流年按钮，观察命盘动态边框变化。</li>
+              <li>切到 AI 聊天页，选择命理师并开始提问。</li>
+            </ol>
+          </div>
         </div>
       )}
     </div>
