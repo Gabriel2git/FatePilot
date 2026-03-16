@@ -11,6 +11,7 @@ const port = 3001;
 const CURRENT_BASELINE_YEAR = 2026;
 const MIN_YEAR = 1900;
 const MAX_YEAR = 2100;
+const MID_YEAR_ANCHOR = '06-30';
 
 console.log('=== Server Start ===');
 console.log('NODE_ENV:', process.env.NODE_ENV);
@@ -34,6 +35,10 @@ function parseRequestBody(req) {
     });
     req.on('error', reject);
   });
+}
+
+function getHoroscopeForYear(astrolabe, year) {
+  return astrolabe.horoscope(`${year}-${MID_YEAR_ANCHOR}`);
 }
 
 function safeJsonStringify(payload) {
@@ -227,7 +232,7 @@ function buildDecadalYearlyInfo(astrolabe, targetYear, horoscope) {
   const years = [];
 
   for (let year = startYear; year <= endYear; year += 1) {
-    const yearlyHoroscope = astrolabe.horoscope(`${year}-01-01`);
+    const yearlyHoroscope = getHoroscopeForYear(astrolabe, year);
     years.push({
       year,
       yearGanzhi: `${yearlyHoroscope?.yearly?.heavenlyStem || ''}${yearlyHoroscope?.yearly?.earthlyBranch || ''}`,
@@ -273,7 +278,7 @@ function buildPromptDecadalBlocks(astrolabe, referenceYear, referenceHoroscope, 
     const years = [];
 
     for (let year = startYear; year <= endYear; year += 1) {
-      const yearlyHoroscope = astrolabe.horoscope(`${year}-01-01`);
+      const yearlyHoroscope = getHoroscopeForYear(astrolabe, year);
       years.push({
         year,
         yearGanzhi: `${yearlyHoroscope?.yearly?.heavenlyStem || ''}${yearlyHoroscope?.yearly?.earthlyBranch || ''}`,
@@ -283,7 +288,7 @@ function buildPromptDecadalBlocks(astrolabe, referenceYear, referenceHoroscope, 
       });
     }
 
-    const firstYearHoroscope = astrolabe.horoscope(`${startYear}-01-01`);
+    const firstYearHoroscope = getHoroscopeForYear(astrolabe, startYear);
 
     return {
       index: index + 1,
@@ -367,7 +372,7 @@ const server = http.createServer(async (req, res) => {
         ? iztro.astro.byLunar(birthday, hourIndex, gender, isLeap, true, 'zh-CN')
         : iztro.astro.bySolar(birthday, hourIndex, gender, true, 'zh-CN');
 
-      const horoscopeRaw = astrolabeRaw.horoscope(`${normalizedTargetYear}-01-01`);
+      const horoscopeRaw = getHoroscopeForYear(astrolabeRaw, normalizedTargetYear);
       const decadalYearlyInfo = buildDecadalYearlyInfo(astrolabeRaw, normalizedTargetYear, horoscopeRaw);
       const promptDecadalBlocks = buildPromptDecadalBlocks(
         astrolabeRaw,
@@ -390,6 +395,7 @@ const server = http.createServer(async (req, res) => {
         '[ziwei_api_success]',
         JSON.stringify({
           targetYear: normalizedTargetYear,
+          anchorDate: `${normalizedTargetYear}-${MID_YEAR_ANCHOR}`,
           hasPalaces: Array.isArray(payload.astrolabe?.palaces),
           palaceCount: payload.astrolabe?.palaces?.length || 0,
           hasHoroscopeAge: typeof payload.horoscope?.age?.nominalAge === 'number',

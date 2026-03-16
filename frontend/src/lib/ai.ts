@@ -191,6 +191,7 @@ export function parseZiweiToPrompt(fullData: ZiweiData): [string, string] {
     `节气四柱：${pan?.chineseDate || '未知'}`,
     `五行局：${pan?.fiveElementsClass || '未知'}`,
     `身主：${pan?.body || '未知'}；命主：${pan?.soul || '未知'}；身宫：${pan?.earthlyBranchOfBodyPalace || '未知'}`,
+    '运限年份锚点：每年06-30（年中口径）',
     '系统基准年份：2026年',
     `当前推演年份：${targetYear}年`,
     `当前虚岁（iztro）：${yun?.age?.nominalAge ?? '未知'}`,
