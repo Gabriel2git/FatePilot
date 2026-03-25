@@ -1,4 +1,4 @@
-﻿﻿import type { DecadalBlock, Palace, SelectedContext, ZiweiData } from '@/types';
+﻿﻿import type { Palace, SelectedContext, ZiweiData } from '@/types';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -62,6 +62,8 @@ export const PERSONA_PROMPTS: Record<PersonaType, string> = {
 export const AI_MODELS = ['qwen3-max', 'glm-4.7', 'qwen3.5-flash', 'kimi-k2.5'];
 
 const MUTAGEN_LABELS = ['禄', '权', '科', '忌'];
+const PALACE_NAMES = ['命宫', '兄弟', '夫妻', '子女', '财帛', '疾厄', '迁移', '交友', '官禄', '田宅', '福德', '父母'];
+const EARTHLY_BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
 
 function formatMutagen(mutagen: string[] | undefined): string {
   if (!Array.isArray(mutagen) || mutagen.length === 0) return '无';
@@ -97,17 +99,62 @@ function formatCurrentYearField(palace: Palace, selectedContext: SelectedContext
   return `${year}年`;
 }
 
-function buildPalaceText(astrolabe: any, selectedContext?: SelectedContext): string {
+function getDynamicPalaceName(currentBranch: string | undefined, targetLifeBranch: string | undefined): string | null {
+  if (!currentBranch || !targetLifeBranch) return null;
+  const currentIndex = EARTHLY_BRANCHES.indexOf(currentBranch);
+  const lifeIndex = EARTHLY_BRANCHES.indexOf(targetLifeBranch);
+  if (currentIndex === -1 || lifeIndex === -1) return null;
+
+  const clockwiseDistance = (currentIndex - lifeIndex + 12) % 12;
+  const palaceIndex = (12 - clockwiseDistance) % 12;
+  return PALACE_NAMES[palaceIndex] || null;
+}
+
+function resolvePalaceRoleName(
+  palaceIndex: number,
+  scope: 'decadal' | 'yearly',
+  horoscope: any,
+  palace: Palace,
+  selectedContext: SelectedContext | undefined,
+): string {
+  const palaceNames = horoscope?.[scope]?.palaceNames;
+  if (Array.isArray(palaceNames) && typeof palaceNames[palaceIndex] === 'string' && palaceNames[palaceIndex]) {
+    return palaceNames[palaceIndex];
+  }
+
+  const targetBranch =
+    scope === 'decadal'
+      ? selectedContext?.decadal?.earthlyBranch || horoscope?.decadal?.earthlyBranch
+      : selectedContext?.yearly?.earthlyBranch || horoscope?.yearly?.earthlyBranch;
+
+  return getDynamicPalaceName(palace?.earthlyBranch, targetBranch) || '无';
+}
+
+function buildPalaceText(astrolabe: any, horoscope: any, selectedContext?: SelectedContext): string {
   const palaces: Palace[] = astrolabe?.palaces || [];
 
   return palaces
-    .map((palace) => {
-      const overlap =
-        selectedContext?.decadal?.earthlyBranch &&
-        selectedContext?.yearly?.earthlyBranch &&
-        selectedContext.decadal.earthlyBranch === selectedContext.yearly.earthlyBranch
-          ? '同宫'
-          : '无';
+    .map((palace, palaceIndex) => {
+      const decadalRoleName = resolvePalaceRoleName(palaceIndex, 'decadal', horoscope, palace, selectedContext);
+      const yearlyRoleName = resolvePalaceRoleName(palaceIndex, 'yearly', horoscope, palace, selectedContext);
+      const relation =
+        decadalRoleName !== '无' && yearlyRoleName !== '无' ? (decadalRoleName === yearlyRoleName ? '同宫' : '分宫') : '无';
+      const decadalBranch = selectedContext?.decadal?.earthlyBranch || horoscope?.decadal?.earthlyBranch;
+      const yearlyBranch = selectedContext?.yearly?.earthlyBranch || horoscope?.yearly?.earthlyBranch;
+      const isCurrentDecadalPalace = Boolean(decadalBranch) && decadalBranch === palace?.earthlyBranch;
+      const isCurrentYearlyPalace = Boolean(yearlyBranch) && yearlyBranch === palace?.earthlyBranch;
+      const lineItems = [`限流关系 : ${relation}`];
+
+      if (isCurrentDecadalPalace) {
+        lineItems.push(`当前大限四化 : ${formatMutagen(selectedContext?.decadal?.mutagen || horoscope?.decadal?.mutagen)}`);
+      }
+      if (isCurrentYearlyPalace) {
+        lineItems.push(`当前流年四化 : ${formatMutagen(selectedContext?.yearly?.mutagen || horoscope?.yearly?.mutagen)}`);
+      }
+
+      const relationAndMutagenLines = lineItems
+        .map((line, index) => `│   ${index === lineItems.length - 1 ? '└' : '├'}${line}`)
+        .join('\n');
 
       const start = palace?.decadal?.range?.[0] ?? '-';
       const end = palace?.decadal?.range?.[1] ?? '-';
@@ -125,38 +172,11 @@ function buildPalaceText(astrolabe: any, selectedContext?: SelectedContext): str
 │   ├大限 : ${start} ~ ${end}虚岁
 │   ├小限 : ${minorAges}虚岁
 │   ├流年 : ${formatCurrentYearField(palace, selectedContext)}
-│   └限流叠宫 : ${overlap}`;
+│   ├大限宫位 : ${decadalRoleName}
+│   ├流年宫位 : ${yearlyRoleName}
+${relationAndMutagenLines}`;
     })
     .join('\n\n');
-}
-
-function buildDecadalBlocksText(blocks: DecadalBlock[] | undefined): string {
-  if (!Array.isArray(blocks) || blocks.length === 0) {
-    return '├大限流年信息\n│ └无';
-  }
-
-  const sections = blocks.map((block) => {
-    const startYear = block.yearRange?.[0] ?? '-';
-    const endYear = block.yearRange?.[1] ?? '-';
-    const startAge = block.decadalRange?.[0] ?? '-';
-    const endAge = block.decadalRange?.[1] ?? '-';
-
-    const yearlyText = (block.years || [])
-      .map((item) => {
-        return `│ │ │ ├${item.year}年[${item.yearGanzhi || '未知'}](${item.nominalAge ?? '未知'}虚岁)
-│ │ │ │ ├命宫干支:${item.lifePalaceGanzhi || '未知'}
-│ │ │ │ └流年四化:${formatMutagen(item.yearlyMutagen)}`;
-      })
-      .join('\n');
-
-    return `│ ├第${block.index}大限[${block.decadalGanzhi || '未知'}]
-│ │ ├起止年份:${startYear}年(${startAge}虚岁)~${endYear}年(${endAge}虚岁)
-│ │ ├大限四化:${formatMutagen(block.decadalMutagen)}
-│ │ ├流年
-${yearlyText}`;
-  });
-
-  return `├大限流年信息\n│ │\n${sections.join('\n')}`;
 }
 
 function buildSelectedSummary(selectedContext: SelectedContext | undefined): string {
@@ -203,8 +223,7 @@ export function parseZiweiToPrompt(fullData: ZiweiData): [string, string] {
     `当前虚岁（iztro）：${yun?.age?.nominalAge ?? '未知'}`,
   ].join('\n');
 
-  const palaceText = buildPalaceText(pan, fullData.selectedContext);
-  const decadalBlocksText = buildDecadalBlocksText(fullData.promptDecadalBlocks);
+  const palaceText = buildPalaceText(pan, yun, fullData.selectedContext);
   const selectedSummary = buildSelectedSummary(fullData.selectedContext);
 
   const systemPrompt = `你是紫微斗数大师，请严格基于本次提供的 iztro 命盘与运限实算数据回答，不要使用模拟数据。
@@ -214,8 +233,6 @@ ${baseInfo}
 
 ├命盘十二宫
 ${palaceText}
-
-${decadalBlocksText}
 
 ├当前选择摘要
 ${selectedSummary}`;
@@ -322,3 +339,4 @@ export async function getLLMResponse(
 }
 
 export { fetchRAGContext };
+
