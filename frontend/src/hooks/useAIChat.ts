@@ -92,6 +92,7 @@ export function useAIChat(
       reader = stream.getReader();
       const decoder = new TextDecoder();
       let aiResponseContent = '';
+      let hasReasoningStream = false;
 
       const tempMessageIndex = newMessages.length;
       setMessages([...newMessages, { role: 'assistant', content: '' }]);
@@ -111,6 +112,10 @@ export function useAIChat(
 
           try {
             const data = JSON.parse(line.slice(6));
+            const reasoningDelta = data?.choices?.[0]?.delta?.reasoning_content;
+            if (reasoningDelta) {
+              hasReasoningStream = true;
+            }
             const delta = data?.choices?.[0]?.delta?.content;
             if (!delta) continue;
 
@@ -124,6 +129,10 @@ export function useAIChat(
             // Ignore malformed stream lines.
           }
         }
+      }
+
+      if (hasReasoningStream) {
+        console.info('[AI] reasoning_content detected in stream:', model);
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {

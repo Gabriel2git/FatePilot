@@ -60,6 +60,7 @@ export const PERSONA_PROMPTS: Record<PersonaType, string> = {
 };
 
 export const AI_MODELS = ['qwen3-max', 'glm-4.7', 'qwen3.5-flash', 'kimi-k2.5'];
+const THINKING_ENABLED_MODEL_PREFIXES = ['qwen3-max', 'qwen3.5-flash'];
 
 const MUTAGEN_LABELS = ['禄', '权', '科', '忌'];
 const PALACE_NAMES = ['命宫', '兄弟', '夫妻', '子女', '财帛', '疾厄', '迁移', '交友', '官禄', '田宅', '福德', '父母'];
@@ -306,7 +307,9 @@ export async function getLLMResponse(
     stream: true,
   };
 
-  if (model === 'qwen3.5-flash') {
+  const normalizedModel = model.toLowerCase();
+  const shouldEnableThinking = THINKING_ENABLED_MODEL_PREFIXES.some((prefix) => normalizedModel.startsWith(prefix));
+  if (shouldEnableThinking) {
     requestBody.extra_body = { enable_thinking: true };
   }
 
@@ -329,4 +332,3 @@ export async function getLLMResponse(
 }
 
 export { fetchRAGContext };
-
