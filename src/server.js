@@ -695,14 +695,24 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/api/rag/search') {
     try {
       const body = await parseRequestBody(req);
-      const { query, topK = 3 } = body;
+      const {
+        query,
+        topK,
+        count,
+        threshold = 0.6,
+        topic,
+      } = body;
 
       if (!query) {
         sendJson(res, 400, { error: 'Missing query parameter' });
         return;
       }
 
-      const results = await retrievalService.search(query, topK);
+      const results = await retrievalService.search(query, {
+        count: count || topK || 3,
+        threshold,
+        topic,
+      });
       const context = retrievalService.buildContext(results);
       sendJson(res, 200, { results, context });
     } catch (error) {
@@ -715,14 +725,24 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/api/rag/test') {
     try {
       const body = await parseRequestBody(req);
-      const { query, topK = 3 } = body;
+      const {
+        query,
+        topK,
+        count,
+        threshold = 0.6,
+        topic,
+      } = body;
 
       if (!query) {
         sendJson(res, 400, { error: 'Missing query parameter' });
         return;
       }
 
-      const results = await retrievalService.search(query, topK);
+      const results = await retrievalService.search(query, {
+        count: count || topK || 3,
+        threshold,
+        topic,
+      });
       const context = retrievalService.buildContext(results);
       const prompt = `你是一位专业的紫微斗数命理师，请根据以下资料回答用户问题：\n\n${context}\n\n用户问题：${query}\n\n请提供清晰、专业、可执行的建议。`;
       sendJson(res, 200, { results, context, prompt });
