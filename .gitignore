@@ -15,6 +15,10 @@ __pycache__/
 .idea/
 *.iml
 
+# Trae 本地文档
+.trae/document/
+.trae/documents/
+
 # 克隆的项目副本
 cursor/
 trae/
