@@ -34,7 +34,7 @@ FatePilot 当前提供以下核心能力：
 ### AI 与模型
 
 - OpenAI 兼容 Chat Completions 接口
-- 当前前端内置模型：`deepseek-v4-flash`、`deepseek-v4-pro[1m]`
+- 当前前端内置模型：`deepseek-v4-flash`、`deepseek-v4-pro`
 
 ## 目录结构（核心）
 

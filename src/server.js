@@ -9,7 +9,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 const port = 3001;
 const PROVIDER_BASE_URL = process.env.PROVIDER_BASE_URL || 'https://api.deepseek.com/v1';
-const AVAILABLE_LLM_MODELS = new Set(['deepseek-v4-flash', 'deepseek-v4-pro[1m]']);
+const AVAILABLE_LLM_MODELS = new Set(['deepseek-v4-flash', 'deepseek-v4-pro']);
 const CURRENT_BASELINE_YEAR = 2026;
 const MIN_YEAR = 1900;
 const MAX_YEAR = 2100;

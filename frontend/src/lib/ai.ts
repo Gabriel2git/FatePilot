@@ -59,7 +59,7 @@ export const PERSONA_PROMPTS: Record<PersonaType, string> = {
     '你是“人生导航与疗愈师”。先承接情绪与处境，再做命盘结构判断，最后给出短期可执行动作与长期成长路线，避免空泛安慰。论命必须遵循：宫位定人事，星情断吉凶，四化寻契机，行运看变化。',
 };
 
-export const AI_MODELS = ['deepseek-v4-flash', 'deepseek-v4-pro[1m]'];
+export const AI_MODELS = ['deepseek-v4-flash', 'deepseek-v4-pro'];
 
 const MUTAGEN_LABELS = ['禄', '权', '科', '忌'];
 const PALACE_NAMES = ['命宫', '兄弟', '夫妻', '子女', '财帛', '疾厄', '迁移', '交友', '官禄', '田宅', '福德', '父母'];
