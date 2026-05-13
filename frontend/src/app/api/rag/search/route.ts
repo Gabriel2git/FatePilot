@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 
 function buildContext(results: any[]): string {
@@ -17,7 +17,8 @@ export async function POST(request: Request) {
   console.log('[RAG API] 收到请求');
 
   try {
-    const { query, threshold = 0.7, count = 5, topic } = await request.json();
+    const { query, threshold = 0.7, count, topK, topic } = await request.json();
+    const matchCount = count || topK || 5;
     console.log('[RAG API] 查询参数:', { query: query?.substring(0, 50), threshold, count, topic });
 
     const apiKey = process.env.DASHSCOPE_API_KEY;
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
       {
         model: 'tongyi-embedding-vision-flash-2026-03-06',
         input: {
-          texts: [{ text: query }]
+          contents: [{ text: query }]
         }
       },
       {
@@ -43,7 +44,14 @@ export async function POST(request: Request) {
 
     const embedding = embeddingResponse.data.output.embeddings[0].embedding;
 
-    const supabase = createServerComponentClient({});
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase 配置缺失');
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('[RAG API] Supabase 客户端创建成功');
 
     let result;
@@ -52,13 +60,13 @@ export async function POST(request: Request) {
         query_embedding: embedding,
         filter_topic: topic,
         match_threshold: threshold,
-        match_count: count
+        match_count: matchCount
       });
     } else {
       result = await supabase.rpc('match_ziwei_chunks', {
         query_embedding: embedding,
         match_threshold: threshold,
-        match_count: count
+        match_count: matchCount
       });
     }
 
