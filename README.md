@@ -88,10 +88,14 @@ cd ..
 AUTH_CODE=your_auth_code
 
 # 必填：模型服务地址
-PROVIDER_BASE_URL=https://api.deepseek.com/v1
+PROVIDER_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 
 # 必填：服务端模型密钥
-DEEPSEEK_API_KEY=your_api_key
+DASHSCOPE_API_KEY=your_api_key
+
+# 必填：RAG 向量库
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```
 
 前端：`frontend/.env.local`
@@ -191,10 +195,17 @@ npm run dev
 
 ### 3) AI 提示 Key 未设置
 
-- 检查 `backend/.env` 是否配置 `DEEPSEEK_API_KEY`
+- 检查 `backend/.env` 是否配置 `DASHSCOPE_API_KEY`
 - 确认后端已经重启
 
-### 4) 命盘切换后 Prompt 看起来没更新
+### 4) RAG 提示检索服务未初始化
+
+- 检查后端环境是否配置 `SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`、`DASHSCOPE_API_KEY`
+- 确认 Render 后端日志出现 `检索服务初始化完成`
+- 调用 `/health`，确认返回 `ragInitialized: true`
+- Vercel 前端只配置 `NEXT_PUBLIC_API_URL`，不要把 Supabase service role key 或 DashScope key 放到前端公开变量
+
+### 5) 命盘切换后 Prompt 看起来没更新
 
 - 先确认查看的是最新提交对应文件（不是仅看最顶层提交）
 - 在 AI 调试区查看完整 Prompt 内容
@@ -203,7 +214,8 @@ npm run dev
 
 - 前端推荐部署到 Vercel，根目录设为 `frontend`
 - 后端推荐部署到 Render，启动命令：`node src/server.js`
-- 生产环境务必配置：`AUTH_CODE`、`PROVIDER_BASE_URL`、`DEEPSEEK_API_KEY`、`NEXT_PUBLIC_API_URL`
+- Render 后端务必配置：`AUTH_CODE`、`PROVIDER_BASE_URL`、`DASHSCOPE_API_KEY`、`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`
+- Vercel 前端务必配置：`NEXT_PUBLIC_API_URL`
 
 ## 免责声明
 

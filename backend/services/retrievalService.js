@@ -7,6 +7,7 @@ class RetrievalService {
   constructor() {
     this.supabase = null;
     this.initialized = false;
+    this.initializationError = null;
   }
 
   async initialize() {
@@ -15,21 +16,36 @@ class RetrievalService {
 
       const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const missingConfig = [];
 
       if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Supabase 配置缺失');
+        missingConfig.push('SUPABASE_URL 或 SUPABASE_SERVICE_ROLE_KEY');
       }
       if (!process.env.DASHSCOPE_API_KEY) {
-        throw new Error('DashScope API Key 缺失');
+        missingConfig.push('DASHSCOPE_API_KEY');
+      }
+      if (missingConfig.length > 0) {
+        throw new Error(`RAG 配置缺失: ${missingConfig.join(', ')}`);
       }
 
       this.supabase = createClient(supabaseUrl, supabaseKey);
       this.initialized = true;
+      this.initializationError = null;
       console.log('检索服务初始化完成');
     } catch (error) {
+      this.initialized = false;
+      this.supabase = null;
+      this.initializationError = error?.message || 'RAG 初始化失败';
       console.error('检索服务初始化失败:', error);
       throw error;
     }
+  }
+
+  getStatus() {
+    return {
+      initialized: this.initialized,
+      error: this.initializationError,
+    };
   }
 
   async generateEmbedding(text) {
@@ -64,7 +80,9 @@ class RetrievalService {
 
   async search(query, options = {}) {
     if (!this.initialized) {
-      throw new Error('检索服务未初始化');
+      const error = new Error(this.initializationError || '检索服务未初始化');
+      error.statusCode = 503;
+      throw error;
     }
 
     const normalizedOptions = typeof options === 'number'

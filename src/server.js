@@ -25,6 +25,10 @@ console.log('LLM API key exists:', !!(process.env.DEEPSEEK_API_KEY || process.en
 const retrievalService = new RetrievalService();
 retrievalService.initialize().catch(console.error);
 
+function getRetrievalHealth() {
+  return retrievalService.getStatus();
+}
+
 class TTLCache {
   constructor(maxSize = CACHE_MAX_SIZE, ttlMs = CACHE_TTL_MS) {
     this.maxSize = maxSize;
@@ -551,7 +555,12 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && req.url === '/health') {
-    sendJson(res, 200, { status: 'ok' });
+    const retrievalHealth = getRetrievalHealth();
+    sendJson(res, 200, {
+      status: 'ok',
+      ragInitialized: retrievalHealth.initialized,
+      ragError: retrievalHealth.error || null,
+    });
     return;
   }
 
@@ -717,7 +726,11 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { results, context });
     } catch (error) {
       console.error('RAG search error:', error);
-      sendJson(res, 500, { error: error.message });
+      const statusCode = error.statusCode || 500;
+      sendJson(res, statusCode, {
+        error: error.message || 'RAG 检索失败',
+        ragInitialized: getRetrievalHealth().initialized,
+      });
     }
     return;
   }
@@ -748,7 +761,11 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { results, context, prompt });
     } catch (error) {
       console.error('RAG test error:', error);
-      sendJson(res, 500, { error: error.message });
+      const statusCode = error.statusCode || 500;
+      sendJson(res, statusCode, {
+        error: error.message || 'RAG 测试失败',
+        ragInitialized: getRetrievalHealth().initialized,
+      });
     }
     return;
   }
