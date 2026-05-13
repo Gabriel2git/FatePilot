@@ -282,11 +282,11 @@ export default function ChartView({
           <div className="w-full max-w-2xl bg-white dark:bg-[#1a2a2a] border border-purple-200 dark:border-purple-800 rounded-2xl p-5 md:p-6 shadow-lg">
             <h3 className="text-lg md:text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">完整使用流程</h3>
             <ol className="list-decimal list-inside space-y-2 text-sm md:text-base text-gray-700 dark:text-gray-300">
-              <li>桌面端在左侧栏填写出生信息；手机端先点“菜单”打开侧边栏。</li>
+              <li>桌面端直接在左侧栏填写出生信息；手机端先点“菜单”打开侧边栏。</li>
               <li>点击“开始排盘”，等待命盘和运限数据加载完成。</li>
-              <li>在命盘页点击大限/流年按钮，观察命盘动态边框与运限信息变化。</li>
-              <li>切到 AI 命理师页；首次使用先输入邀请码，通过后选择命理师。</li>
-              <li>确认选择后进入对话，AI 会基于当前命盘继续回答。</li>
+              <li>在命盘页点击大限或流年按钮，观察命盘动态边框与运限信息变化。</li>
+              <li>切到 AI 命理师页；首次使用先输入邀请码，通过后再选择命理师。</li>
+              <li>进入对话后，AI 会基于当前命盘继续回答你的问题。</li>
               <li>如需比较模型，在侧边栏的 AI 模型区域进入“模型延迟测试”。</li>
             </ol>
           </div>

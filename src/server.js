@@ -8,6 +8,8 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 const port = 3001;
+const PROVIDER_BASE_URL = process.env.PROVIDER_BASE_URL || 'https://api.deepseek.com/v1';
+const AVAILABLE_LLM_MODELS = new Set(['deepseek-v4-flash', 'deepseek-v4-pro[1m]']);
 const CURRENT_BASELINE_YEAR = 2026;
 const MIN_YEAR = 1900;
 const MAX_YEAR = 2100;
@@ -18,6 +20,7 @@ const CACHE_MAX_SIZE = 300;
 console.log('=== Server Start ===');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('AUTH_CODE exists:', !!process.env.AUTH_CODE);
+console.log('LLM API key exists:', !!(process.env.DEEPSEEK_API_KEY || process.env.DASHSCOPE_API_KEY || process.env.OPENAI_API_KEY));
 
 const retrievalService = new RetrievalService();
 retrievalService.initialize().catch(console.error);
@@ -171,6 +174,73 @@ function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;
   res.setHeader('Content-Type', 'application/json');
   res.end(safeJsonStringify(payload));
+}
+
+function getProviderApiKey() {
+  return (
+    process.env.DEEPSEEK_API_KEY ||
+    process.env.DASHSCOPE_API_KEY ||
+    process.env.OPENAI_API_KEY ||
+    ''
+  ).trim();
+}
+
+async function proxyLLMChat(res, body) {
+  const apiKey = getProviderApiKey();
+  if (!apiKey) {
+    sendJson(res, 503, { error: 'LLM API key is not configured' });
+    return;
+  }
+
+  const { model, messages, stream = true, max_tokens } = body || {};
+  if (!AVAILABLE_LLM_MODELS.has(model)) {
+    sendJson(res, 400, { error: 'Unsupported model' });
+    return;
+  }
+  if (!Array.isArray(messages) || messages.length === 0) {
+    sendJson(res, 400, { error: 'Missing messages' });
+    return;
+  }
+
+  const requestBody = {
+    model,
+    messages,
+    stream,
+  };
+
+  if (Number.isInteger(max_tokens) && max_tokens > 0) {
+    requestBody.max_tokens = max_tokens;
+  }
+
+  const upstream = await fetch(`${PROVIDER_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  res.statusCode = upstream.status;
+  res.setHeader('Content-Type', upstream.headers.get('content-type') || 'text/event-stream; charset=utf-8');
+
+  if (!upstream.body) {
+    const text = await upstream.text();
+    res.end(text);
+    return;
+  }
+
+  const reader = upstream.body.getReader();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      res.write(Buffer.from(value));
+    }
+    res.end();
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 function pickPrimitiveFields(source, keys) {
@@ -659,6 +729,21 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       console.error('RAG test error:', error);
       sendJson(res, 500, { error: error.message });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/api/llm/chat') {
+    try {
+      const body = await parseRequestBody(req);
+      await proxyLLMChat(res, body);
+    } catch (error) {
+      console.error('LLM proxy error:', error);
+      if (!res.headersSent) {
+        sendJson(res, 500, { error: error.message });
+      } else {
+        res.end();
+      }
     }
     return;
   }

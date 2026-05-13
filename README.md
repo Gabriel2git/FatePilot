@@ -33,8 +33,8 @@ FatePilot 当前提供以下核心能力：
 
 ### AI 与模型
 
-- DashScope 兼容接口
-- 当前前端内置模型：`qwen3-max`、`glm-4.7`、`qwen3.5-flash`、`kimi-k2.5`
+- OpenAI 兼容 Chat Completions 接口
+- 当前前端内置模型：`deepseek-v4-flash`、`deepseek-v4-pro[1m]`
 
 ## 目录结构（核心）
 
@@ -86,16 +86,19 @@ cd ..
 ```env
 # 必填：AI 功能邀请码
 AUTH_CODE=your_auth_code
+
+# 必填：模型服务地址
+PROVIDER_BASE_URL=https://api.deepseek.com/v1
+
+# 必填：服务端模型密钥
+DEEPSEEK_API_KEY=your_api_key
 ```
 
 前端：`frontend/.env.local`
 
 ```env
-# 可选：后端地址，不填默认 http://localhost:3001
+# 前端访问的后端地址
 NEXT_PUBLIC_API_URL=http://localhost:3001
-
-# 必填：DashScope Key（前端读取键名）
-NEXT_PUBLIC_DASHSCOPE_API_KEY=your_dashscope_api_key
 ```
 
 ### 5) 启动服务
@@ -128,6 +131,7 @@ npm run dev
 | POST | `/api/rag/search` | RAG 检索 |
 | POST | `/api/rag/test` | RAG 测试（返回示例 prompt） |
 | POST | `/api/verify-code` | 邀请码校验 |
+| POST | `/api/llm/chat` | 服务端代理模型对话 |
 
 ## 使用流程
 
@@ -187,8 +191,8 @@ npm run dev
 
 ### 3) AI 提示 Key 未设置
 
-- 检查 `frontend/.env.local` 是否配置 `NEXT_PUBLIC_DASHSCOPE_API_KEY`
-- 重启前端开发服务器
+- 检查 `backend/.env` 是否配置 `DEEPSEEK_API_KEY`
+- 确认后端已经重启
 
 ### 4) 命盘切换后 Prompt 看起来没更新
 
@@ -199,7 +203,7 @@ npm run dev
 
 - 前端推荐部署到 Vercel，根目录设为 `frontend`
 - 后端推荐部署到 Render，启动命令：`node src/server.js`
-- 生产环境务必配置：`AUTH_CODE`、`NEXT_PUBLIC_API_URL`、`NEXT_PUBLIC_DASHSCOPE_API_KEY`
+- 生产环境务必配置：`AUTH_CODE`、`PROVIDER_BASE_URL`、`DEEPSEEK_API_KEY`、`NEXT_PUBLIC_API_URL`
 
 ## 免责声明
 

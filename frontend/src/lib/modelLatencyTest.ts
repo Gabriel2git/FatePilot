@@ -12,18 +12,7 @@ export interface LatencyResult {
  * 测试单个模型的延迟
  */
 async function testModelLatency(model: string): Promise<LatencyResult> {
-  const apiKey = process.env.NEXT_PUBLIC_DASHSCOPE_API_KEY;
-  const baseUrl = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
-
-  if (!apiKey) {
-    return {
-      model,
-      firstByteTime: 0,
-      totalTime: 0,
-      success: false,
-      error: 'API Key 未设置',
-    };
-  }
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   const testMessages: Message[] = [
     {
@@ -43,19 +32,14 @@ async function testModelLatency(model: string): Promise<LatencyResult> {
     max_tokens: 50,
   };
 
-  if (model === 'qwen3.5-flash') {
-    requestBody.extra_body = { enable_thinking: true };
-  }
-
   const startTime = performance.now();
   let firstByteTime = 0;
 
   try {
-    const response = await fetch(`${baseUrl}/chat/completions`, {
+    const response = await fetch(`${API_BASE_URL}/api/llm/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(requestBody),
     });

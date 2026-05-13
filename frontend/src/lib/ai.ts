@@ -59,8 +59,7 @@ export const PERSONA_PROMPTS: Record<PersonaType, string> = {
     '你是“人生导航与疗愈师”。先承接情绪与处境，再做命盘结构判断，最后给出短期可执行动作与长期成长路线，避免空泛安慰。论命必须遵循：宫位定人事，星情断吉凶，四化寻契机，行运看变化。',
 };
 
-export const AI_MODELS = ['qwen3-max', 'glm-4.7', 'qwen3.5-flash', 'kimi-k2.5'];
-const THINKING_ENABLED_MODEL_PREFIXES = ['qwen3-max', 'qwen3.5-flash'];
+export const AI_MODELS = ['deepseek-v4-flash', 'deepseek-v4-pro[1m]'];
 
 const MUTAGEN_LABELS = ['禄', '权', '科', '忌'];
 const PALACE_NAMES = ['命宫', '兄弟', '夫妻', '子女', '财帛', '疾厄', '迁移', '交友', '官禄', '田宅', '福德', '父母'];
@@ -291,15 +290,10 @@ async function fetchRAGContext(query: string): Promise<string> {
 
 export async function getLLMResponse(
   messages: Message[],
-  model: string = 'qwen3.5-flash',
+  model: string = AI_MODELS[0],
   signal?: AbortSignal,
 ): Promise<ReadableStream<Uint8Array> | null> {
-  const apiKey = process.env.NEXT_PUBLIC_DASHSCOPE_API_KEY;
-  const baseUrl = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
-
-  if (!apiKey) {
-    throw new Error('DASHSCOPE_API_KEY is not set');
-  }
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   const requestBody: any = {
     model,
@@ -307,17 +301,10 @@ export async function getLLMResponse(
     stream: true,
   };
 
-  const normalizedModel = model.toLowerCase();
-  const shouldEnableThinking = THINKING_ENABLED_MODEL_PREFIXES.some((prefix) => normalizedModel.startsWith(prefix));
-  if (shouldEnableThinking) {
-    requestBody.extra_body = { enable_thinking: true };
-  }
-
-  const response = await fetch(`${baseUrl}/chat/completions`, {
+  const response = await fetch(`${API_BASE_URL}/api/llm/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(requestBody),
     signal,
