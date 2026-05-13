@@ -275,17 +275,19 @@ export default function ChartView({
         <div className="flex flex-col items-center justify-center h-full text-gray-600 dark:text-gray-300 px-6">
           <div className="mb-6 text-center">
             <div className="inline-flex items-center gap-2 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-4 py-2 rounded-full font-bold text-sm md:text-base">
-              <span>点击顶部导航栏开始使用</span>
+              <span>先填写出生信息并完成排盘</span>
             </div>
           </div>
 
           <div className="w-full max-w-2xl bg-white dark:bg-[#1a2a2a] border border-purple-200 dark:border-purple-800 rounded-2xl p-5 md:p-6 shadow-lg">
             <h3 className="text-lg md:text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">完整使用流程</h3>
             <ol className="list-decimal list-inside space-y-2 text-sm md:text-base text-gray-700 dark:text-gray-300">
-              <li>点击顶部导航栏（桌面）或底部菜单（手机）进入相应页面。</li>
-              <li>在侧边栏输入出生信息后点击“开始排盘”。</li>
-              <li>在命盘页点击大限/流年按钮，观察命盘动态边框变化。</li>
-              <li>在顶部导航栏切到 AI 命理师页面，选择命理师并开始提问。</li>
+              <li>桌面端在左侧栏填写出生信息；手机端先点“菜单”打开侧边栏。</li>
+              <li>点击“开始排盘”，等待命盘和运限数据加载完成。</li>
+              <li>在命盘页点击大限/流年按钮，观察命盘动态边框与运限信息变化。</li>
+              <li>切到 AI 命理师页；首次使用先输入邀请码，通过后选择命理师。</li>
+              <li>确认选择后进入对话，AI 会基于当前命盘继续回答。</li>
+              <li>如需比较模型，在侧边栏的 AI 模型区域进入“模型延迟测试”。</li>
             </ol>
           </div>
         </div>
