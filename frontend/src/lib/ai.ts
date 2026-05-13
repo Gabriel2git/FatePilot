@@ -1,4 +1,4 @@
-﻿﻿import type { Palace, SelectedContext, ZiweiData } from '@/types';
+﻿import type { Palace, SelectedContext, ZiweiData } from '@/types';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -230,12 +230,13 @@ ${selectedSummary}`;
   return [systemPrompt, dataContext];
 }
 
-export function generateMasterPrompt(
+export async function generateMasterPrompt(
   userQuestion: string,
   fullData: ZiweiData,
   targetYear: number,
   persona: PersonaType = 'companion',
   selectionContext?: SelectedContext,
+  useRAG: boolean = true,
 ) {
   const personaPrompt = PERSONA_PROMPTS[persona];
 
@@ -247,12 +248,30 @@ export function generateMasterPrompt(
 
   const [systemPrompt, dataContext] = parseZiweiToPrompt(mergedData);
 
+  let ragContext = '';
+  if (useRAG) {
+    try {
+      ragContext = await fetchRAGContext(userQuestion);
+    } catch (error) {
+      console.warn('RAG检索失败，使用无RAG模式:', error);
+    }
+  }
+
+  const ragSection = ragContext
+    ? `
+
+# 紫微斗数知识库检索结果
+${ragContext}
+
+（以上检索结果来自紫微斗数知识库，供参考）`
+    : '';
+
   return `${systemPrompt}
 
 ${personaPrompt}
 
 # User Data
-${dataContext}
+${dataContext}${ragSection}
 
 # Task
 用户问题：${userQuestion}
@@ -261,7 +280,8 @@ ${dataContext}
 1. 先给结论，再给依据。
 2. 明确区分本命结构与当前大限/流年引动。
 3. 四化必须引用本次数据中的真实字段（禄权科忌）。
-4. 给出可执行建议，避免空泛结论。`;
+4. 如有知识库检索结果，可结合进行解读。
+5. 给出可执行建议，避免空泛结论。`;
 }
 
 async function fetchRAGContext(query: string): Promise<string> {

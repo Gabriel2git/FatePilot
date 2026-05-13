@@ -21,9 +21,9 @@ export function useAIChat(
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const initializeChat = (data: ZiweiData, persona?: PersonaType) => {
+  const initializeChat = async (data: ZiweiData, persona?: PersonaType) => {
     const currentPersona = persona || selectedPersona;
-    const fullPrompt = generateMasterPrompt('请分析我的命盘', data, data?.targetYear || horoscopeYear, currentPersona);
+    const fullPrompt = await generateMasterPrompt('请分析我的命盘', data, data?.targetYear || horoscopeYear, currentPersona);
 
     setMessages([
       { role: 'system', content: fullPrompt },
@@ -38,8 +38,8 @@ export function useAIChat(
     setDebugPrompt(`=== 系统提示词 ===\n${fullPrompt}`);
   };
 
-  const updateChatForHoroscope = (data: ZiweiData) => {
-    const fullPrompt = generateMasterPrompt('请分析我的命盘', data, data?.targetYear || horoscopeYear, selectedPersona);
+  const updateChatForHoroscope = async (data: ZiweiData) => {
+    const fullPrompt = await generateMasterPrompt('请分析我的命盘', data, data?.targetYear || horoscopeYear, selectedPersona);
 
     setMessages([
       { role: 'system', content: fullPrompt },
@@ -73,7 +73,7 @@ export function useAIChat(
       setLoadingStage('model');
 
       const systemPrompt = resolvedZiweiData
-        ? generateMasterPrompt(
+        ? await generateMasterPrompt(
             inputMessage,
             resolvedZiweiData,
             resolvedZiweiData.targetYear || horoscopeYear,

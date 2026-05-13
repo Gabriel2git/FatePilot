@@ -1,29 +1,13 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
+import { matchZiweiChunks, buildContext, ChunkResult } from '@/lib/rag';
 
 interface RagTestProps {
   onBack: () => void;
 }
 
-interface SearchResult {
-  text: string;
-  relevance_score: number;
-  document: {
-    fileName: string;
-    category: string;
-    filePath: string;
-  };
-  chunk: string;
-}
-
-interface RagTestResponse {
-  results: SearchResult[];
-  context: string;
-  prompt: string;
-}
-
 export default function RagTest({ onBack }: RagTestProps) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [results, setResults] = useState<ChunkResult[]>([]);
   const [context, setContext] = useState('');
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -39,25 +23,23 @@ export default function RagTest({ onBack }: RagTestProps) {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3001/api/rag/test', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: query.trim(),
-          topK: 3,
-        }),
+      const searchResults = await matchZiweiChunks(query.trim(), {
+        threshold: 0.6,
+        count: 3,
       });
 
-      if (!response.ok) {
-        throw new Error('API 调用失败');
-      }
+      setResults(searchResults || []);
 
-      const data: RagTestResponse = await response.json();
-      setResults(data.results || []);
-      setContext(data.context || '');
-      setPrompt(data.prompt || '');
+      const contextText = buildContext(searchResults || []);
+      setContext(contextText);
+
+      const ragPrompt = `
+
+# 紫微斗数知识库检索结果
+${contextText}
+
+（以上检索结果来自紫微斗数知识库，供参考）`;
+      setPrompt(ragPrompt);
     } catch (err) {
       setError('查询失败，请稍后重试');
       console.error('RAG 测试失败:', err);
@@ -118,9 +100,9 @@ export default function RagTest({ onBack }: RagTestProps) {
                 {results.map((result, index) => (
                   <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                     <div className="flex justify-between items-start">
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100">{result.document.fileName}</h4>
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">{result.title}</h4>
                       <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
-                        相关性 {result.relevance_score?.toFixed(2) || 'N/A'}
+                        相似度 {((result.similarity || 0) * 100).toFixed(1)}%
                       </span>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{result.text.substring(0, 200)}...</p>
