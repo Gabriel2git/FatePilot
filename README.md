@@ -181,6 +181,27 @@ npm run dev
 
 带来的影响：模型更容易定位“谁在变化、变化来自哪里”，解读一致性提升。
 
+### 2026-05-14：线上 RAG 链路跑通
+
+为什么改：线上 Vercel 页面曾出现 RAG 查询失败，单看 `/health` 返回 `ok` 不能证明检索链路真的可用。  
+改了什么：
+
+- Render 后端增加 RAG 初始化状态输出，`/health` 返回 `ragInitialized` 与安全错误摘要
+- RAG 检索服务改为在服务端完成 DashScope embedding，再调用 Supabase pgvector RPC
+- 前端 RAG 测试页通过 `NEXT_PUBLIC_API_URL` 请求 Render 后端
+- 明确生产环境变量边界：RAG 密钥只放 Render 后端，不放 Vercel 前端
+- 修正 Supabase 地址配置口径：`SUPABASE_URL` 必须使用项目根地址，不使用带 `/rest/v1/` 的 API URL
+
+已验证通过：
+
+- Vercel 前端能请求 Render 后端
+- Render 后端 RAG 初始化正常
+- DashScope embedding 正常
+- Supabase 向量检索正常
+- 页面能展示检索结果和生成上下文
+
+带来的影响：RAG 不再停留在“服务启动成功”，而是完整验证了“前端请求 -> 后端 embedding -> Supabase 向量检索 -> 页面展示”的生产链路。
+
 ## 常见问题
 
 ### 1) 邀请码验证失败
@@ -204,8 +225,24 @@ npm run dev
 - 确认 Render 后端日志出现 `检索服务初始化完成`
 - 调用 `/health`，确认返回 `ragInitialized: true`
 - Vercel 前端只配置 `NEXT_PUBLIC_API_URL`，不要把 Supabase service role key 或 DashScope key 放到前端公开变量
+- 如果接口返回 `Invalid path specified in request URL`，通常是 `SUPABASE_URL` 配成了 Supabase 的 REST API URL。正确格式应类似 `https://your-project.supabase.co`，不要带 `/rest/v1/`
 
-### 5) 命盘切换后 Prompt 看起来没更新
+### 5) `/health` 正常但 RAG 查询仍失败
+
+`/health` 只能说明后端进程和 RAG 初始化状态正常，不能单独证明完整检索链路已跑通。继续按下面顺序排查：
+
+1. 确认 Vercel 的 `NEXT_PUBLIC_API_URL` 指向 Render 后端根地址，例如 `https://your-render-service.onrender.com`
+2. 确认 Render 的 `SUPABASE_URL` 是 Supabase 项目根地址，例如 `https://your-project.supabase.co`
+3. 确认 Render 的 `DASHSCOPE_API_KEY` 和 `SUPABASE_SERVICE_ROLE_KEY` 已配置并重新部署
+4. 直接请求 Render 后端的 `/api/rag/search`，body 使用：
+
+```json
+{"query":"命宫","count":3,"threshold":0.6}
+```
+
+期望返回 `results` 数组，并且 Vercel 页面能显示“检索结果”和“生成的上下文”。
+
+### 6) 命盘切换后 Prompt 看起来没更新
 
 - 先确认查看的是最新提交对应文件（不是仅看最顶层提交）
 - 在 AI 调试区查看完整 Prompt 内容
@@ -216,6 +253,8 @@ npm run dev
 - 后端推荐部署到 Render，启动命令：`node src/server.js`
 - Render 后端务必配置：`AUTH_CODE`、`PROVIDER_BASE_URL`、`DASHSCOPE_API_KEY`、`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`
 - Vercel 前端务必配置：`NEXT_PUBLIC_API_URL`
+- `SUPABASE_URL` 使用 Supabase 项目根地址，不使用后台展示的 RESTful endpoint（不要带 `/rest/v1/`）
+- `NEXT_PUBLIC_API_URL` 使用 Render 后端根地址，不额外拼 `/api`
 
 ## 免责声明
 
