@@ -102,8 +102,8 @@ export default function AIChat({
   }, [isLoading]);
 
   return (
-    <div className="h-full min-h-0 flex flex-col relative">
-      <div className="flex justify-between items-center mb-2 sm:mb-4">
+    <div className="fp-chat-panel h-full min-h-0 flex flex-col relative">
+      <div className="fp-chat-heading flex justify-between items-center mb-2 sm:mb-4">
         <h2 className="text-sm sm:text-xl font-bold text-gray-900 dark:text-gray-100">AI 命理师</h2>
         <div className="flex gap-2 items-center">
           <span
@@ -141,27 +141,24 @@ export default function AIChat({
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain show-scrollbar bg-white dark:bg-[#1a2a2a] rounded-2xl shadow-2xl p-2 sm:p-6 mb-2 sm:mb-4 relative"
+        className="fp-chat-transcript flex-1 min-h-0 overflow-y-auto overscroll-contain show-scrollbar mb-2 sm:mb-4 relative"
       >
         {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+          <div className="fp-chat-empty flex items-center justify-center h-full">
             <p>先完成出生信息并排盘，再围绕当前命盘开始对话。</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="fp-chat-thread space-y-4">
             {messages
               .filter((message) => message.role !== 'system')
               .map((message, index) => (
-                <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div
-                    className={`fp-chat-message max-w-[85%] sm:max-w-[80%] p-2 sm:p-4 rounded-xl sm:rounded-2xl text-[13px] sm:text-sm leading-relaxed ${
-                      message.role === 'user'
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                    }`}
-                  >
-                    <div className="whitespace-pre-wrap">{message.content}</div>
-                  </div>
+                <div key={index} className={`fp-chat-row ${message.role === 'user' ? 'is-user' : 'is-assistant'}`}>
+                  {message.role !== 'user' && <span className="fp-chat-avatar" aria-hidden="true">解</span>}
+                  <article className={`fp-chat-bubble ${message.role === 'user' ? 'fp-chat-bubble-user' : 'fp-chat-bubble-assistant'}`}>
+                    {message.role !== 'user' && <div className="fp-chat-speaker">命盘解读</div>}
+                    <div className="fp-chat-message whitespace-pre-wrap">{message.content}</div>
+                  </article>
+                  {message.role === 'user' && <span className="fp-chat-user-mark" aria-hidden="true">我</span>}
                 </div>
               ))}
 
@@ -178,23 +175,24 @@ export default function AIChat({
             )}
 
             {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 dark:bg-gray-700 p-3 sm:p-4 rounded-2xl min-w-[180px] border border-gray-200 dark:border-gray-600">
+              <div className="fp-chat-row is-assistant">
+                <span className="fp-chat-avatar" aria-hidden="true">解</span>
+                <div className="fp-chat-loading p-3 sm:p-4 min-w-[180px]">
                   <div className="flex items-center gap-3">
                     <div className="relative w-6 h-6">
-                      <div className="absolute inset-0 rounded-full border-2 border-purple-200 dark:border-purple-900" />
-                      <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-purple-500 animate-spin" />
-                      <div className="absolute inset-1 rounded-full bg-purple-500/30 animate-pulse" />
+                      <div className="fp-chat-spinner-track absolute inset-0 rounded-full border-2" />
+                      <div className="fp-chat-spinner absolute inset-0 rounded-full border-2 border-transparent animate-spin" />
+                      <div className="fp-chat-spinner-core absolute inset-1 rounded-full animate-pulse" />
                     </div>
                     <div className="flex-1">
-                      <div className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">{loadingText}</div>
-                      <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">已等待 {waitingSeconds}s</div>
+                      <div className="fp-chat-loading-title text-xs sm:text-sm font-semibold">{loadingText}</div>
+                      <div className="fp-chat-loading-time text-[11px] mt-1">已等待 {waitingSeconds}s</div>
                     </div>
                   </div>
                   <div className="flex gap-1 mt-3">
-                    <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" />
-                    <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                    <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                    <div className="fp-chat-loading-dot w-1.5 h-1.5 rounded-full animate-bounce" />
+                    <div className="fp-chat-loading-dot w-1.5 h-1.5 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                    <div className="fp-chat-loading-dot w-1.5 h-1.5 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
                   </div>
                 </div>
               </div>
@@ -211,14 +209,14 @@ export default function AIChat({
               setShowJumpToBottom(false);
               scrollToBottom();
             }}
-            className="absolute bottom-3 right-3 px-3 py-1.5 text-xs rounded-full bg-purple-600 text-white shadow-lg hover:bg-purple-700 transition-colors"
+            className="fp-chat-jump absolute bottom-3 right-3 px-3 py-1.5 text-xs rounded-full transition-colors"
           >
             回到底部
           </button>
         )}
       </div>
 
-      <div className="bg-white dark:bg-[#1a2a2a] rounded-2xl shadow-2xl p-2 sm:p-4">
+      <div className="fp-chat-composer p-2 sm:p-3">
         <div className="flex gap-2">
           <textarea
             value={inputMessage}
@@ -226,19 +224,19 @@ export default function AIChat({
             onKeyDown={onKeyPress}
             placeholder="请输入您的问题..."
             disabled={isLoading || !hasBirthData}
-            className="flex-1 p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none resize-none text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+            className="fp-chat-input flex-1 p-2 resize-none text-sm focus:outline-none disabled:cursor-not-allowed"
             rows={2}
           />
           <button
             onClick={onSendMessage}
             disabled={isLoading || !inputMessage.trim() || !hasBirthData}
-            className="px-3 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="fp-chat-send px-3 py-2 text-sm font-medium disabled:cursor-not-allowed transition-colors"
           >
             {isLoading ? '生成中...' : '发送'}
           </button>
         </div>
         {!hasBirthData && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">请先完成出生信息并排盘</p>
+            <p className="fp-chat-hint text-xs mt-2 text-center">请先完成出生信息并排盘</p>
         )}
       </div>
 
