@@ -9,6 +9,7 @@ interface PalaceCellProps {
   horoscope?: any;
   earthlyBranchOfBodyPalace?: string;
   birthYearStem?: string;
+  isSelected?: boolean;
 }
 
 function getDynamicPalaceName(currentBranch: string, targetLifeBranch?: string) {
@@ -58,7 +59,7 @@ function renderStar(star: any, decadalMutagen: string[] | undefined, yearlyMutag
   );
 }
 
-export default function PalaceCell({ palace, horoscope, earthlyBranchOfBodyPalace, birthYearStem }: PalaceCellProps) {
+export default function PalaceCell({ palace, horoscope, earthlyBranchOfBodyPalace, birthYearStem, isSelected = false }: PalaceCellProps) {
   if (!palace) return null;
 
   const isCurrentDecadal = horoscope?.decadal?.earthlyBranch === palace.earthlyBranch;
@@ -74,23 +75,23 @@ export default function PalaceCell({ palace, horoscope, earthlyBranchOfBodyPalac
 
   return (
     <div
-      className={`w-full h-full p-0.5 sm:p-1.5 flex flex-col justify-between ${
+      className={`fp-palace-cell w-full h-full p-0.5 sm:p-1.5 flex flex-col justify-between ${
         isCurrentYearly
-          ? 'border-2 border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)] bg-red-50 dark:bg-red-900/30'
+          ? 'border-2 border-[#a44135] bg-[#f6e9e4]'
           : isCurrentDecadal
-            ? 'border-2 border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] bg-blue-50 dark:bg-blue-900/30'
-            : 'border border-gray-600 dark:border-gray-500 bg-white dark:bg-[#1a2a2a]'
-      }`}
+            ? 'border-2 border-[#a58a58] bg-[#f5f0e5]'
+            : 'border border-[#e4dece] bg-[#fffdf8]'
+      } ${isSelected ? 'ring-2 ring-inset ring-[#a44135]' : ''}`}
     >
       <div className="flex flex-col gap-0.5">
         <div className="flex flex-wrap gap-0.5 content-start">
           {(palace.majorStars || []).map((star: any) =>
-            renderStar(star, decadalMutagen, yearlyMutagen, 'text-red-700 dark:text-red-400 font-bold text-[9px] sm:text-base leading-tight'),
+            renderStar(star, decadalMutagen, yearlyMutagen, 'text-[#9a3c32] font-bold text-[9px] sm:text-base leading-tight'),
           )}
         </div>
         <div className="flex flex-wrap gap-0.5 content-start">
           {(palace.minorStars || []).map((star: any) =>
-            renderStar(star, decadalMutagen, yearlyMutagen, 'text-blue-700 dark:text-blue-400 text-[8px] sm:text-sm leading-tight'),
+            renderStar(star, decadalMutagen, yearlyMutagen, 'text-[#56645a] text-[8px] sm:text-sm leading-tight'),
           )}
         </div>
       </div>
@@ -137,7 +138,7 @@ export default function PalaceCell({ palace, horoscope, earthlyBranchOfBodyPalac
               因
             </span>
           )}
-          <span className="text-xs sm:text-lg font-bold text-blue-800 dark:text-blue-400">
+          <span className="text-xs sm:text-lg font-bold text-[#5b5c52]">
             {palace.heavenlyStem}
             {palace.earthlyBranch}
           </span>

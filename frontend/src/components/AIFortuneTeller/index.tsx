@@ -1,11 +1,10 @@
 ﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
-import PersonaSelector from '@/components/PersonaSelector';
 import AIChat from '@/components/AIChat';
-import { PersonaType } from '@/lib/ai';
+import { AI_MODELS, PersonaType } from '@/lib/ai';
 import type { ContextStatus } from '@/types';
 
 interface AIFortuneTellerProps {
@@ -25,14 +24,14 @@ interface AIFortuneTellerProps {
   messagesContainerRef: React.RefObject<HTMLDivElement>;
   onSendMessage: () => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
-  onSaveHistory: () => void;
-  onLoadHistory: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  setMessages: (msgs: any[]) => void;
   selectedPersona: PersonaType;
   onPersonaChange: (persona: PersonaType) => void;
   ziweiData: any;
   initializeChat: (ziweiData: any, persona?: PersonaType) => void;
   stopGeneration: () => void;
+  readingContext?: string;
+  onBackToChart?: () => void;
+  onSelectedModelChange?: (model: string) => void;
 }
 
 function AIFortuneTellerContent({
@@ -52,71 +51,59 @@ function AIFortuneTellerContent({
   messagesContainerRef,
   onSendMessage,
   onKeyPress,
-  onSaveHistory,
-  onLoadHistory,
-  setMessages,
   selectedPersona,
   onPersonaChange,
   ziweiData,
   initializeChat,
   stopGeneration,
+  readingContext = '本命全盘',
+  onBackToChart,
+  onSelectedModelChange,
 }: AIFortuneTellerProps) {
   const { isAuthenticated } = useAuth();
-  const [currentView, setCurrentView] = useState<'select-persona' | 'chat'>('select-persona');
-
   if (!isAuthenticated) {
     return <AuthGuard>{null}</AuthGuard>;
   }
 
-  if (currentView === 'select-persona') {
-    return (
-      <div className="h-full min-h-0 flex flex-col overflow-y-auto show-scrollbar pb-20 md:pb-0">
-        <PersonaSelector
-          selectedPersona={selectedPersona}
-          onPersonaChange={(persona) => {
-            if (!hasBirthData) {
-              alert('请先输入出生信息并排盘，然后再选择命理师');
-              return;
-            }
-
-            onPersonaChange(persona);
-            if (ziweiData) {
-              initializeChat(ziweiData, persona);
-            }
-            setCurrentView('chat');
-          }}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="h-full min-h-0 flex flex-col overflow-hidden">
-      <div className="flex-shrink-0 mb-4 px-4 py-2 bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-900/30 dark:to-blue-900/30 rounded-lg">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            当前命理师
-            <span className="font-bold ml-2">
-              {selectedPersona === 'companion' && '💬 大白话解盘伴侣'}
-              {selectedPersona === 'mentor' && '📘 硬核紫微导师'}
-              {selectedPersona === 'healer' && '🌱 人生导航与疗愈师'}
-            </span>
-          </span>
-          <button
-            onClick={() => {
-              if (confirm('切换命理师将重新开始对话，是否继续？')) {
-                setMessages([]);
-                setCurrentView('select-persona');
-              }
-            }}
-            className="text-xs text-purple-600 dark:text-purple-400 hover:underline"
-          >
-            切换命理师
-          </button>
+    <div className="fp-ai-page">
+      <div className="fp-ai-page-heading">
+        <div>
+          <div className="fp-eyebrow">A CONVERSATION GROUNDED IN YOUR CHART</div>
+          <h1>命理解读</h1>
+          <p>已带入：{readingContext}</p>
+        </div>
+        <div className="fp-ai-heading-actions">
+          <label htmlFor="ai-model-select">解读模型</label>
+          <select id="ai-model-select" value={selectedModel} onChange={(event) => onSelectedModelChange?.(event.target.value)}>
+            {AI_MODELS.map((model) => <option key={model} value={model}>{model}</option>)}
+          </select>
+          {onBackToChart && <button className="fp-secondary-button" onClick={onBackToChart}>返回命盘</button>}
         </div>
       </div>
-
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="fp-ai-contextbar">
+        <div><span className="fp-context-seal">解</span><span><strong>你的命盘已就绪</strong><small>AI 会结合出生资料、十二宫和当前运限回答</small></span></div>
+        <div className="fp-persona-control">
+          <span>解读风格</span>
+          {([
+            ['companion', '温和陪伴'],
+            ['mentor', '结构分析'],
+            ['healer', '行动建议'],
+          ] as const).map(([persona, label]) => (
+            <button
+              key={persona}
+              className={selectedPersona === persona ? 'active' : ''}
+              onClick={() => {
+                if (selectedPersona === persona) return;
+                if (messages.filter((message) => message.role !== 'system').length > 1 && !confirm('切换解读风格会重新开始当前对话，是否继续？')) return;
+                onPersonaChange(persona);
+                if (ziweiData) initializeChat(ziweiData, persona);
+              }}
+            >{label}</button>
+          ))}
+        </div>
+      </div>
+      <div className="fp-ai-chat-area">
         <AIChat
           messages={messages}
           inputMessage={inputMessage}
@@ -134,8 +121,6 @@ function AIFortuneTellerContent({
           messagesContainerRef={messagesContainerRef}
           onSendMessage={onSendMessage}
           onKeyPress={onKeyPress}
-          onSaveHistory={onSaveHistory}
-          onLoadHistory={onLoadHistory}
           stopGeneration={stopGeneration}
         />
       </div>

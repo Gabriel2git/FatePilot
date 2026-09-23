@@ -41,6 +41,13 @@ interface ChartViewProps {
   onDeleteCase: (caseId: string, event: React.MouseEvent) => void;
   onYearChange?: (year: number) => void;
   onTestAIPrompt?: (savedCase: SavedCase) => void;
+  horoscopeYear: number;
+  isRefreshingData: boolean;
+  selectedPalace: any | null;
+  setSelectedPalace: (palace: any | null) => void;
+  onStartReading: () => void;
+  scope: 'natal' | 'decadal' | 'yearly';
+  setScope: (scope: 'natal' | 'decadal' | 'yearly') => void;
 }
 
 function getDecadalStartYear(targetYear: number, currentNominalAge: number, decadalStartAge: number): number {
@@ -62,6 +69,13 @@ export default function ChartView({
   onDeleteCase,
   onYearChange,
   onTestAIPrompt,
+  horoscopeYear,
+  isRefreshingData,
+  selectedPalace,
+  setSelectedPalace,
+  onStartReading,
+  scope,
+  setScope,
 }: ChartViewProps) {
   const chartRef = useRef<HTMLDivElement>(null);
 
@@ -115,10 +129,13 @@ export default function ChartView({
     if (selectedDecadal && selectedDecadal.start === decadalInfo.start) {
       setSelectedDecadal(null);
       setSelectedYear(null);
+      setScope('natal');
+      onYearChange?.(new Date().getFullYear());
       return;
     }
 
     setSelectedDecadal(decadalInfo);
+    setScope('decadal');
 
     const firstYear = getDecadalStartYear(
       Number(ziweiData.targetYear),
@@ -144,121 +161,161 @@ export default function ChartView({
     return Array.from({ length: Math.max(totalYears, 0) }, (_, index) => startYear + index);
   }, [selectedDecadal, ziweiData?.horoscope?.age?.nominalAge, ziweiData?.targetYear]);
 
+  const activePalace =
+    selectedPalace || ziweiData?.astrolabe?.palaces?.find((palace: any) => palace.name === '命宫') || null;
+  const yearlyOptions = selectedDecadal
+    ? yearsOfSelectedDecadal
+    : Array.from({ length: 5 }, (_, index) => horoscopeYear - 2 + index);
+  const readingPeriod = selectedDecadal
+    ? `${selectedDecadal.start}–${selectedDecadal.end}岁大限${selectedYear ? ` · ${selectedYear}年流年` : ''}`
+    : `${selectedYear || horoscopeYear}年流年`;
+  const majorStars = (activePalace?.majorStars || []).map((star: any) => star.name).filter(Boolean).join('、');
+  const minorStars = (activePalace?.minorStars || []).slice(0, 4).map((star: any) => star.name).filter(Boolean).join('、');
+
   return (
-    <div className="max-w-6xl mx-auto h-full overflow-y-auto pb-16 md:pb-0">
+    <div className="fp-chart-page">
       {ziweiData && birthData ? (
         <>
-          <div className="bg-white dark:bg-[#1a2a2a] rounded-2xl shadow-2xl p-4 md:p-8">
-            <div className="flex justify-center mb-6" ref={chartRef}>
+          <div className="fp-chart-heading">
+            <div>
+              <div className="fp-eyebrow">YOUR NATAL CHART</div>
+              <h1>命盘总览</h1>
+              <div className="fp-birth-summary">
+                <strong>{birthData.gender === 'male' ? '男命' : '女命'}</strong>
+                <span>{birthData.birthdayType === 'lunar' ? '农历' : '公历'} {birthData.birthday}</span>
+                <span>{birthData.birthTime}时 {String(birthData.birthMinute).padStart(2, '0')}分</span>
+                <span>命盘已生成</span>
+              </div>
+            </div>
+            <div className="fp-chart-actions">
+              <button className="fp-secondary-button" onClick={() => setShowSavedCases(!showSavedCases)}>
+                我的命例 ({savedCases.length})
+              </button>
+              <button className="fp-secondary-button" onClick={handleExportChart}>导出命盘</button>
+              <button className="fp-primary-button" onClick={onSaveCase}>保存命例</button>
+            </div>
+          </div>
+
+          <div className="fp-chart-layout">
+          <section className="fp-chart-card">
+            <div className="fp-chart-card-head">
+              <div>
+                <strong>十二宫位</strong>
+                <span>点击宫位，查看星曜与主题</span>
+              </div>
+              {isRefreshingData && <span className="fp-refreshing">正在更新运限…</span>}
+            </div>
+            <div className="fp-scope-tabs" role="tablist" aria-label="选择命盘范围">
+                <button className={scope === 'natal' ? 'active' : ''} onClick={() => {
+                setScope('natal');
+                setSelectedDecadal(null);
+                setSelectedYear(null);
+                onYearChange?.(new Date().getFullYear());
+              }}>本命</button>
+              <button className={scope === 'decadal' ? 'active' : ''} onClick={() => setScope('decadal')}>大限</button>
+              <button className={scope === 'yearly' ? 'active' : ''} onClick={() => setScope('yearly')}>流年</button>
+              <span>{scope === 'natal' ? '本命结构' : selectedDecadal ? `${selectedDecadal.start}–${selectedDecadal.end} 岁` : `${selectedYear || horoscopeYear} 年`}</span>
+            </div>
+
+            {scope === 'decadal' && (
+              <div className="fp-period-options" aria-label="选择大限">
+                {decadalButtons.map((item: any) => (
+                  <button
+                    key={`${item.stem}${item.branch}-${item.start}`}
+                    onClick={() => handleSelectDecadal(item)}
+                    className={selectedDecadal?.start === item.start ? 'active' : ''}
+                    aria-pressed={selectedDecadal?.start === item.start}
+                    title={`${item.name} ${item.stem}${item.branch}`}
+                  >{item.start}–{item.end} 岁</button>
+                ))}
+                {decadalButtons.length === 0 && <span>当前命盘没有可用的大限数据</span>}
+              </div>
+            )}
+
+            {scope === 'yearly' && (
+              <div className="fp-period-options" aria-label="选择流年">
+                {yearlyOptions.map((year) => (
+                  <button
+                    key={year}
+                    onClick={() => {
+                      if (selectedYear === year || isRefreshingData) return;
+                      setScope('yearly');
+                      setSelectedYear(year);
+                      onYearChange?.(year);
+                    }}
+                    className={(selectedYear || horoscopeYear) === year ? 'active' : ''}
+                    aria-pressed={(selectedYear || horoscopeYear) === year}
+                  >{year} 年</button>
+                ))}
+              </div>
+            )}
+
+            <div className="fp-chart-grid-wrap" ref={chartRef}>
               <ZiweiChart
                 ziweiData={{
                   astrolabe: ziweiData?.astrolabe,
-                  horoscope: ziweiData?.horoscope,
+                  horoscope: scope === 'natal' ? undefined : ziweiData?.horoscope,
                 }}
+                selectedPalace={activePalace?.name || null}
+                onSelectPalace={setSelectedPalace}
               />
             </div>
+            <div className="fp-chart-legend"><span><i className="fp-dot-red" />流年宫位</span><span><i className="fp-dot-gold" />大限宫位</span><span>四化标记随运限同步变化</span></div>
+          </section>
 
-            {ziweiData?.astrolabe && (
-              <div className="mb-6">
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {decadalButtons.map((item: any) => (
-                    <button
-                      key={`${item.stem}${item.branch}-${item.start}`}
-                      onClick={() => handleSelectDecadal(item)}
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
-                        selectedDecadal?.start === item.start
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                      title={`${item.name} ${item.stem}${item.branch}`}
-                    >
-                      {item.start}-{item.end}岁
-                    </button>
-                  ))}
-                </div>
-
-                {selectedDecadal && (
-                  <div className="flex flex-wrap gap-2">
-                    {yearsOfSelectedDecadal.map((year) => (
-                      <button
-                        key={year}
-                        onClick={() => {
-                          if (selectedYear === year) {
-                            return;
-                          }
-                          setSelectedYear(year);
-                          onYearChange?.(year);
-                        }}
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
-                          selectedYear === year
-                            ? 'bg-red-500 text-white'
-                            : 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
-                        }`}
-                      >
-                        {year}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+          <aside className="fp-palace-detail">
+            <div className="fp-detail-eyebrow">PALACE DETAIL</div>
+            <h2>{activePalace?.name || '宫位详情'}</h2>
+            {activePalace ? (
+              <>
+                <p className="fp-detail-branch">{activePalace.heavenlyStem}{activePalace.earthlyBranch} · {activePalace.decadal?.range?.[0]}–{activePalace.decadal?.range?.[1]} 岁</p>
+                <div className="fp-detail-block"><small>主星</small><strong>{majorStars || '暂无主星'}</strong></div>
+                <div className="fp-detail-block"><small>辅曜与杂曜</small><strong>{minorStars || '暂无辅曜'}</strong></div>
+                <p className="fp-detail-copy">点击其他宫位切换关注焦点。进入命理解读后，AI 会围绕当前宫位和所选运限继续分析。</p>
+              </>
+            ) : <p className="fp-detail-copy">选择命盘中的宫位，查看对应星曜信息。</p>}
+            <div className="fp-detail-context"><small>当前解读范围</small><strong>{scope === 'natal' ? '本命全盘' : readingPeriod}</strong></div>
+          </aside>
           </div>
 
-          <div className="border-t border-gray-100 dark:border-gray-800 pt-6 mt-6">
-            <div className="flex flex-wrap gap-4 mb-4">
-              <button
-                onClick={onSaveCase}
-                className="px-2 py-1 text-xs bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-              >
-                保存命例
-              </button>
-              <button
-                onClick={() => setShowSavedCases(!showSavedCases)}
-                className="px-2 py-1 text-xs bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                历史命例 ({savedCases.length})
-              </button>
-              <button
-                onClick={handleExportChart}
-                className="px-2 py-1 text-xs bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-              >
-                导出命盘
-              </button>
-            </div>
+          <div className="fp-ai-bridge">
+            <div><small>下一步</small><strong>带着当前命盘与关注点，开始命理解读</strong><span>{activePalace?.name || '全盘'} · {scope === 'natal' ? '本命结构' : readingPeriod}</span></div>
+            <button onClick={onStartReading}>开始命理解读&nbsp; →</button>
+          </div>
 
-            {showSavedCases && (
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 max-h-96 overflow-y-auto">
-                <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3">已保存的命例</h3>
+          {showSavedCases && (
+              <div className="fp-saved-cases">
+                <h3>我的命例</h3>
                 {savedCases.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400 text-center py-4">暂无保存的命例</p>
+                  <p className="fp-empty-cases">暂无保存的命例</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="fp-saved-list">
                     {savedCases.map((savedCase) => (
                       <div
                         key={savedCase.id}
                         onClick={() => onLoadCase(savedCase)}
-                        className="bg-white dark:bg-gray-700 p-3 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors flex justify-between items-center"
+                        className="fp-saved-item"
                       >
                         <div>
-                          <div className="font-semibold text-gray-900 dark:text-gray-100">{savedCase.name}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                          <div className="fp-saved-name">{savedCase.name}</div>
+                          <div className="fp-saved-meta">
                             {savedCase.birthData.birthday} | {savedCase.birthData.gender === 'male' ? '男' : '女'}
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="fp-saved-actions">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               onTestAIPrompt?.(savedCase);
                             }}
-                            className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600 transition-colors"
+                            className="fp-secondary-button"
                             title="将命例数据作为 Prompt 发送给 AI 进行测试"
                           >
                             测试AI
                           </button>
                           <button
                             onClick={(e) => onDeleteCase(savedCase.id, e)}
-                            className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                            className="fp-danger-button"
                           >
                             删除
                           </button>
@@ -269,28 +326,9 @@ export default function ChartView({
                 )}
               </div>
             )}
-          </div>
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center h-full text-gray-600 dark:text-gray-300 px-6">
-          <div className="mb-6 text-center">
-            <div className="inline-flex items-center gap-2 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-4 py-2 rounded-full font-bold text-sm md:text-base">
-              <span>先填写出生信息并完成排盘</span>
-            </div>
-          </div>
-
-          <div className="w-full max-w-2xl bg-white dark:bg-[#1a2a2a] border border-purple-200 dark:border-purple-800 rounded-2xl p-5 md:p-6 shadow-lg">
-            <h3 className="text-lg md:text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-4">完整使用流程</h3>
-            <ol className="list-decimal list-inside space-y-2 text-sm md:text-base text-gray-700 dark:text-gray-300">
-              <li>桌面端直接在左侧栏填写出生信息；手机端先点“菜单”打开侧边栏。</li>
-              <li>点击“开始排盘”，等待命盘和运限数据加载完成。</li>
-              <li>在命盘页点击大限或流年按钮，观察命盘动态边框与运限信息变化。</li>
-              <li>切到 AI 命理师页；首次使用先输入邀请码，通过后再选择命理师。</li>
-              <li>进入对话后，AI 会基于当前命盘继续回答你的问题。</li>
-              <li>如需比较模型，在侧边栏的 AI 模型区域进入“模型延迟测试”。</li>
-            </ol>
-          </div>
-        </div>
+        <div className="fp-empty-chart"><h2>还没有命盘</h2><p>先填写出生信息，完成排盘后就能查看十二宫和运限。</p></div>
       )}
     </div>
   );

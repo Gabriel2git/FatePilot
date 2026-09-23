@@ -28,8 +28,6 @@ interface AIChatProps {
   messagesContainerRef: React.RefObject<HTMLDivElement>;
   onSendMessage: () => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
-  onSaveHistory: () => void;
-  onLoadHistory: (event: React.ChangeEvent<HTMLInputElement>) => void;
   stopGeneration: () => void;
 }
 
@@ -50,8 +48,6 @@ export default function AIChat({
   messagesContainerRef,
   onSendMessage,
   onKeyPress,
-  onSaveHistory,
-  onLoadHistory,
   stopGeneration,
 }: AIChatProps) {
   const [autoFollow, setAutoFollow] = useState(true);
@@ -106,7 +102,7 @@ export default function AIChat({
   }, [isLoading]);
 
   return (
-    <div className="h-full min-h-0 flex flex-col relative pb-20 md:pb-0">
+    <div className="h-full min-h-0 flex flex-col relative">
       <div className="flex justify-between items-center mb-2 sm:mb-4">
         <h2 className="text-sm sm:text-xl font-bold text-gray-900 dark:text-gray-100">AI 命理师</h2>
         <div className="flex gap-2 items-center">
@@ -130,7 +126,7 @@ export default function AIChat({
                   : '等待命盘数据'}
           </span>
 
-          {isLoading ? (
+          {isLoading && (
             <button
               onClick={stopGeneration}
               className="px-2 py-0.5 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors flex items-center gap-1"
@@ -138,25 +134,6 @@ export default function AIChat({
               <span>⏹️</span>
               <span>终止</span>
             </button>
-          ) : (
-            <>
-              <button
-                onClick={onSaveHistory}
-                className="px-2 py-0.5 bg-green-500 text-white text-xs rounded hover:bg-green-600 transition-colors"
-              >
-                导出
-              </button>
-              <label className="px-2 py-0.5 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors cursor-pointer">
-                导入
-                <input type="file" accept=".json" onChange={onLoadHistory} className="hidden" />
-              </label>
-              <button
-                onClick={() => setShowDebug(!showDebug)}
-                className="px-2 py-0.5 bg-gray-500 text-white text-xs rounded hover:bg-gray-600 transition-colors"
-              >
-                调试
-              </button>
-            </>
           )}
         </div>
       </div>
@@ -168,7 +145,7 @@ export default function AIChat({
       >
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-            <p>请先在左侧输入出生信息并排盘，然后开始对话。</p>
+            <p>先完成出生信息并排盘，再围绕当前命盘开始对话。</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -177,7 +154,7 @@ export default function AIChat({
               .map((message, index) => (
                 <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`max-w-[85%] sm:max-w-[80%] p-2 sm:p-4 rounded-xl sm:rounded-2xl text-xs sm:text-base ${
+                    className={`fp-chat-message max-w-[85%] sm:max-w-[80%] p-2 sm:p-4 rounded-xl sm:rounded-2xl text-[13px] sm:text-sm leading-relaxed ${
                       message.role === 'user'
                         ? 'bg-purple-600 text-white'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
@@ -187,6 +164,18 @@ export default function AIChat({
                   </div>
                 </div>
               ))}
+
+            {messages.filter((message) => message.role !== 'system').length === 1 && !isLoading && (
+              <div className="fp-chat-starters" aria-label="建议问题">
+                {[
+                  '先整体看看我的命盘特点',
+                  '我当前的大限最值得关注什么？',
+                  '结合本命和流年，给我一个行动建议',
+                ].map((question) => (
+                  <button key={question} onClick={() => setInputMessage(question)}>{question}</button>
+                ))}
+              </div>
+            )}
 
             {isLoading && (
               <div className="flex justify-start">
@@ -249,7 +238,7 @@ export default function AIChat({
           </button>
         </div>
         {!hasBirthData && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">请先在左侧输入出生信息并排盘</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">请先完成出生信息并排盘</p>
         )}
       </div>
 

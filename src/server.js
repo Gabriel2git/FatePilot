@@ -20,7 +20,7 @@ const CACHE_MAX_SIZE = 300;
 console.log('=== Server Start ===');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('AUTH_CODE exists:', !!process.env.AUTH_CODE);
-console.log('LLM API key exists:', !!(process.env.DEEPSEEK_API_KEY || process.env.DASHSCOPE_API_KEY || process.env.OPENAI_API_KEY));
+console.log('LLM API key exists:', !!getProviderApiKey());
 
 const retrievalService = new RetrievalService();
 retrievalService.initialize().catch(console.error);
@@ -181,9 +181,15 @@ function sendJson(res, statusCode, payload) {
 }
 
 function getProviderApiKey() {
+  const providerHost = new URL(PROVIDER_BASE_URL).hostname;
+  if (providerHost === 'api.deepseek.com') {
+    return (process.env.DEEPSEEK_API_KEY || '').trim();
+  }
+  if (providerHost.endsWith('aliyuncs.com')) {
+    return (process.env.DASHSCOPE_API_KEY || '').trim();
+  }
+
   return (
-    process.env.DEEPSEEK_API_KEY ||
-    process.env.DASHSCOPE_API_KEY ||
     process.env.OPENAI_API_KEY ||
     ''
   ).trim();

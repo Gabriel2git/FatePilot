@@ -5,7 +5,7 @@ import { AI_MODELS } from '@/lib/ai';
 import { useZiweiData } from '@/hooks/useZiweiData';
 import { useAIChat } from '@/hooks/useAIChat';
 import { useSavedCases } from '@/hooks/useSavedCases';
-import Sidebar, { type PageType } from '@/components/Sidebar';
+import BirthForm from '@/components/BirthForm';
 import ChartView from '@/components/ChartView';
 import RagTest from '@/components/RagTest';
 import AIFortuneTeller from '@/components/AIFortuneTeller';
@@ -29,77 +29,21 @@ interface DecadalInfo {
 }
 
 export default function Home() {
-  const [currentPage, setCurrentPage] = useState<PageType | 'model-test'>('chart');
+  const [currentPage, setCurrentPage] = useState<'input' | 'chart' | 'ai' | 'rag' | 'model-test'>('input');
   const [selectedModel, setSelectedModel] = useState(AI_MODELS[0]);
   const [darkMode, setDarkMode] = useState(false);
-
-  const [sidebarWidth, setSidebarWidth] = useState(300);
-  const [isDragging, setIsDragging] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
-  const dragStartX = useRef(0);
-  const dragStartWidth = useRef(0);
-
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  const handleDragStart = useCallback(
-    (e: React.MouseEvent) => {
-      setIsDragging(true);
-      dragStartX.current = e.clientX;
-      dragStartWidth.current = sidebarWidth;
-      e.preventDefault();
-    },
-    [sidebarWidth],
-  );
-
-  const handleDragMove = useCallback(
-    (e: MouseEvent) => {
-      if (!isDragging) return;
-      const delta = e.clientX - dragStartX.current;
-      const newWidth = Math.max(200, Math.min(420, dragStartWidth.current + delta));
-      setSidebarWidth(newWidth);
-    },
-    [isDragging],
-  );
-
-  const handleDragEnd = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleDragMove);
-      document.addEventListener('mouseup', handleDragEnd);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-    } else {
-      document.removeEventListener('mousemove', handleDragMove);
-      document.removeEventListener('mouseup', handleDragEnd);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleDragMove);
-      document.removeEventListener('mouseup', handleDragEnd);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [isDragging, handleDragMove, handleDragEnd]);
 
   const [hasBirthData, setHasBirthData] = useState(false);
   const [birthData, setBirthData] = useState<BirthData | null>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [showSavedCases, setShowSavedCases] = useState(false);
+  const [savedCasesOpen, setSavedCasesOpen] = useState(false);
+  const [saveCaseOpen, setSaveCaseOpen] = useState(false);
+  const [caseName, setCaseName] = useState('');
+  const toolsMenuRef = useRef<HTMLDetailsElement>(null);
+  const [selectedPalace, setSelectedPalace] = useState<any | null>(null);
+  const [isLoadingChart, setIsLoadingChart] = useState(false);
+  const [chartScope, setChartScope] = useState<'natal' | 'decadal' | 'yearly'>('natal');
   const [selectedDecadal, setSelectedDecadal] = useState<DecadalInfo | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
 
@@ -114,13 +58,20 @@ export default function Home() {
     ensureZiweiContext,
     setError,
   } = useZiweiData();
+  const selectedPeriod = chartScope === 'natal'
+    ? '本命全盘'
+    : chartScope === 'decadal'
+      ? selectedDecadal
+        ? `大限 ${selectedDecadal.start}–${selectedDecadal.end} 岁${selectedYear ? ` · 流年 ${selectedYear}` : ''}`
+        : '大限待选择'
+      : `流年 ${selectedYear || horoscopeYear}`;
+  const readingContext = `${selectedPalace?.name || '全盘'} · ${selectedPeriod}`;
   const resolveCompleteZiweiData = useCallback(async () => {
     if (!birthData) return ziweiData;
     return ensureZiweiContext(birthData, horoscopeYear);
   }, [birthData, ensureZiweiContext, horoscopeYear, ziweiData]);
   const {
     messages,
-    setMessages,
     inputMessage,
     setInputMessage,
     isLoading,
@@ -134,11 +85,28 @@ export default function Home() {
     initializeChat,
     updateChatForHoroscope,
     sendMessage,
-    saveChatHistory,
-    loadChatHistory,
     stopGeneration,
-  } = useAIChat(ziweiData, horoscopeYear, resolveCompleteZiweiData, contextStatus);
+  } = useAIChat(ziweiData, horoscopeYear, resolveCompleteZiweiData, contextStatus, readingContext);
   const { savedCases, saveCase, deleteCase } = useSavedCases();
+
+  useEffect(() => {
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const toolsMenu = toolsMenuRef.current;
+      if (toolsMenu?.open && (!event.target || !toolsMenu.contains(event.target as Node))) {
+        toolsMenu.removeAttribute('open');
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') toolsMenuRef.current?.removeAttribute('open');
+    };
+
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, []);
 
   const toggleDarkMode = () => {
     const htmlElement = document.documentElement;
@@ -148,14 +116,23 @@ export default function Home() {
 
   const handleDataLoaded = async (data: BirthData) => {
     setBirthData(data);
-    setHasBirthData(true);
+    setHasBirthData(false);
+    setSelectedDecadal(null);
+    setSelectedYear(null);
+    setSelectedPalace(null);
+    setChartScope('natal');
+    setIsLoadingChart(true);
     setError(null);
 
     try {
       const realZiweiData = await loadZiweiData(data);
-      initializeChat(realZiweiData);
+      initializeChat(realZiweiData, selectedPersona, '全盘 · 本命全盘');
+      setHasBirthData(true);
+      setCurrentPage('chart');
     } catch (err) {
       console.error('获取后端数据失败:', err);
+    } finally {
+      setIsLoadingChart(false);
     }
   };
 
@@ -178,27 +155,40 @@ export default function Home() {
       return;
     }
 
-    const caseName = prompt('请输入命例名称');
-    if (!caseName) return;
+    setCaseName('');
+    setSaveCaseOpen(true);
+  };
+
+  const confirmSaveCurrentCase = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!birthData || !ziweiData) return;
+    const trimmedName = caseName.trim();
+    if (!trimmedName) return;
 
     saveCase({
       id: Date.now().toString(),
-      name: caseName,
+      name: trimmedName,
       birthData,
       ziweiData,
       savedAt: new Date().toISOString(),
     });
-    alert('命例保存成功');
+    setSaveCaseOpen(false);
+    setCaseName('');
   };
 
   const handleLoadSavedCase = async (caseData: any) => {
     setBirthData(caseData.birthData);
     setShowSavedCases(false);
+    setSelectedDecadal(null);
+    setSelectedYear(null);
+    setSelectedPalace(null);
+    setChartScope('natal');
 
     try {
       const realZiweiData = await loadZiweiData(caseData.birthData);
-      initializeChat(realZiweiData);
+      initializeChat(realZiweiData, selectedPersona, '全盘 · 本命全盘');
       setHasBirthData(true);
+      setCurrentPage('chart');
       alert('命例加载成功');
     } catch (err) {
       console.error('加载命例失败:', err);
@@ -215,8 +205,14 @@ export default function Home() {
   };
 
   const handleTestAIPrompt = (savedCase: any) => {
+    setBirthData(savedCase.birthData);
+    setSelectedDecadal(null);
+    setSelectedYear(null);
+    setSelectedPalace(null);
+    setChartScope('natal');
+    setHasBirthData(true);
     setCurrentPage('ai');
-    initializeChat(savedCase.ziweiData);
+    initializeChat(savedCase.ziweiData, selectedPersona, '全盘 · 本命全盘');
     setDebugPrompt('已载入命例并同步 Prompt，可直接提问。');
   };
 
@@ -227,207 +223,188 @@ export default function Home() {
     }
   };
 
-  // 导航项配置
-  const navItems = [
-    { id: 'chart', label: '命盘显示', icon: '📊' },
-    { id: 'ai', label: 'AI 命理师', icon: '🤖' },
-    { id: 'rag', label: 'RAG 测试', icon: '🔍' },
+  const coreSteps = [
+    { id: 'input', number: '1', label: '出生信息' },
+    { id: 'chart', number: '2', label: '命盘' },
+    { id: 'ai', number: '3', label: '命理解读' },
   ] as const;
+  const navigateTo = (page: (typeof coreSteps)[number]['id']) => {
+    if (page !== 'input' && !hasBirthData) {
+      setCurrentPage('input');
+      return;
+    }
+    setCurrentPage(page);
+  };
 
   return (
-    <div className="h-[100dvh] md:h-screen overflow-hidden bg-gradient-to-br from-purple-50 to-blue-50 dark:from-[#0f1a1a] dark:to-[#0a1414]">
-      {/* 顶部二级导航栏 */}
-      <header className="hidden md:flex items-center justify-between px-6 py-3 bg-white dark:bg-[#1a2a2a] border-b border-gray-200 dark:border-gray-700 shadow-sm z-20">
-        <div className="flex items-center gap-8">
-          <h1 className="text-xl font-bold text-purple-700 dark:text-purple-400">FatePilot</h1>
-          <nav className="flex items-center gap-1">
-            {navItems.map((item) => (
+    <div className={`fp-app ${currentPage === 'ai' ? 'fp-app-chat' : ''}`}>
+      <header className="fp-topbar">
+        <a className="fp-brand" href="#top" onClick={(event) => { event.preventDefault(); setCurrentPage('input'); }}>
+          <span className="fp-brand-mark">命</span><span>FatePilot<small>ZIWEI · DESTINY COMPASS</small></span>
+        </a>
+        <nav className="fp-step-nav" aria-label="主要流程">
+          {coreSteps.map((step, index) => (
+            <div className="fp-step-wrap" key={step.id}>
               <button
-                key={item.id}
-                onClick={() => setCurrentPage(item.id)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  currentPage === item.id
-                    ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
+                className={`fp-step ${currentPage === step.id ? 'active' : ''} ${hasBirthData && index < coreSteps.findIndex((item) => item.id === currentPage) ? 'complete' : ''}`}
+                onClick={() => navigateTo(step.id)}
+                aria-current={currentPage === step.id ? 'step' : undefined}
+                aria-disabled={step.id !== 'input' && !hasBirthData}
               >
-                <span className="mr-2">{item.icon}</span>
-                {item.label}
+                <span className="fp-step-number">{hasBirthData && index === 0 ? '✓' : step.number}</span>{step.label}
               </button>
-            ))}
-          </nav>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setMobileSidebarOpen(true)}
-            className="px-3 py-1.5 rounded-full border border-purple-200 bg-purple-50 text-xs font-semibold text-purple-700 hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-900/30 dark:text-purple-200"
-          >
-            快速上手
-          </button>
-          <button
-            onClick={toggleDarkMode}
-            className="p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-            aria-label={darkMode ? '切换到浅色模式' : '切换到深色模式'}
-          >
-            {darkMode ? '☀️' : '🌙'}
+              {index < coreSteps.length - 1 && <span className="fp-step-divider" />}
+            </div>
+          ))}
+        </nav>
+        <div className="fp-top-tools">
+          <button className="fp-top-link" onClick={() => setSavedCasesOpen(true)}>我的命例</button>
+          <details className="fp-tools-menu" ref={toolsMenuRef}>
+            <summary>工具</summary>
+            <div className="fp-tools-popover">
+              <button onClick={(event) => { setCurrentPage('model-test'); event.currentTarget.closest('details')?.removeAttribute('open'); }}>模型延迟测试</button>
+              <button onClick={(event) => { setCurrentPage('rag'); event.currentTarget.closest('details')?.removeAttribute('open'); }}>知识库测试</button>
+              {currentPage === 'ai' && <button onClick={(event) => { setShowDebug(true); event.currentTarget.closest('details')?.removeAttribute('open'); }}>调试提示词</button>}
+            </div>
+          </details>
+          <button className="fp-theme-toggle" onClick={toggleDarkMode} aria-label={darkMode ? '切换到浅色模式' : '切换到深色模式'}>
+            {darkMode ? '浅色' : '深色'}
           </button>
         </div>
       </header>
 
-      <div className="flex h-full md:h-[calc(100vh-56px)] min-h-0">
-        <div ref={sidebarRef} className="hidden md:block relative flex-shrink-0" style={{ width: sidebarWidth }}>
-          <Sidebar
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-            selectedModel={selectedModel}
-            setSelectedModel={setSelectedModel}
-            onDataLoaded={handleDataLoaded}
-          />
+      <main className={`fp-main ${currentPage === 'ai' ? 'fp-main-ai' : ''}`}>
+        {error && <div className="fp-error" role="alert">{error}</div>}
 
-          <div
-            className="absolute top-0 right-0 w-1 h-full cursor-col-resize bg-transparent hover:bg-purple-500/30 transition-colors z-50"
-            onMouseDown={handleDragStart}
-            style={{ cursor: isDragging ? 'col-resize' : 'ew-resize' }}
-          >
-            <div className="absolute top-1/2 right-0 transform -translate-y-1/2 w-1 h-12 bg-gray-400 dark:bg-gray-600 rounded-full opacity-50 hover:opacity-100 transition-opacity" />
-          </div>
-        </div>
-
-        {mobileSidebarOpen && (
-          <>
-            <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setMobileSidebarOpen(false)} />
-            <div className="fixed left-0 top-0 bottom-0 w-80 z-50 bg-white dark:bg-[#1a2a2a] shadow-2xl md:hidden overflow-y-auto">
-              <div className="p-4">
-                <button
-                  onClick={() => setMobileSidebarOpen(false)}
-                  className="mb-4 p-2 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center gap-2"
-                >
-                  <span>✕</span>
-                  <span>关闭</span>
-                </button>
-                <Sidebar
-                  currentPage={currentPage}
-                  setCurrentPage={(page) => {
-                    setCurrentPage(page);
-                    setMobileSidebarOpen(false);
-                  }}
-                  selectedModel={selectedModel}
-                  setSelectedModel={setSelectedModel}
-                  onDataLoaded={handleDataLoaded}
-                />
-              </div>
+        {currentPage === 'input' && (
+          <section className="fp-input-page">
+            <div className="fp-eyebrow">START WITH YOUR BIRTH MOMENT</div>
+            <h1>先从出生时刻，认识自己的节律</h1>
+            <p className="fp-page-lead">完成排盘后，你可以查看十二宫位、选择人生阶段，再带着当前关注进入命理解读。</p>
+            <div className="fp-input-layout">
+              <section className="fp-input-card">
+                <div className="fp-input-card-head"><strong>出生信息</strong><span>出生地用于真太阳时校正</span></div>
+                <div className="fp-birth-form"><BirthForm onDataLoaded={handleDataLoaded} /></div>
+                {isLoadingChart && <div className="fp-loading-note">正在生成命盘与运限信息…</div>}
+              </section>
+              <aside className="fp-flow-card">
+                <h2>接下来会发生什么</h2>
+                <p>整段体验围绕同一张命盘展开。</p>
+                <div className="fp-flow-item"><i>1</i><div><strong>输入出生时刻</strong><small>选择历法、出生时间、地点与性别。</small></div></div>
+                <div className="fp-flow-item"><i>2</i><div><strong>查看十二宫命盘</strong><small>点选宫位查看星曜与宫位主题。</small></div></div>
+                <div className="fp-flow-item"><i>3</i><div><strong>选大限 / 流年，再开始解读</strong><small>AI 会收到你当前查看的运限与宫位。</small></div></div>
+                <div className="fp-flow-note">命盘页负责看结构与选时间；命理解读页负责围绕当前上下文继续对话。</div>
+              </aside>
             </div>
-          </>
+          </section>
         )}
 
-        <main className="flex-1 min-h-0 p-1 md:p-6 overflow-y-auto md:overflow-hidden show-scrollbar pb-20 md:pb-6">
-          {error && (
-            <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg dark:bg-red-900/30 dark:border-red-800 dark:text-red-400">
-              <div className="flex items-center">
-                <div className="mr-2 text-red-500">⚠️</div>
-                <div>{error}</div>
+        {currentPage === 'chart' && (
+          <ChartView
+            ziweiData={ziweiData}
+            birthData={birthData}
+            selectedDecadal={selectedDecadal}
+            setSelectedDecadal={setSelectedDecadal}
+            selectedYear={selectedYear}
+            setSelectedYear={setSelectedYear}
+            savedCases={savedCases}
+            showSavedCases={showSavedCases}
+            setShowSavedCases={setShowSavedCases}
+            onSaveCase={handleSaveCurrentCase}
+            onLoadCase={handleLoadSavedCase}
+            onDeleteCase={handleDeleteSavedCase}
+            onYearChange={handleHoroscopeYearChange}
+            onTestAIPrompt={handleTestAIPrompt}
+            horoscopeYear={horoscopeYear}
+            isRefreshingData={isRefreshingData}
+            selectedPalace={selectedPalace}
+            setSelectedPalace={setSelectedPalace}
+            onStartReading={() => setCurrentPage('ai')}
+            scope={chartScope}
+            setScope={setChartScope}
+          />
+        )}
+
+        {currentPage === 'ai' && (
+          <AIFortuneTeller
+            messages={messages}
+            inputMessage={inputMessage}
+            setInputMessage={setInputMessage}
+            isLoading={isLoading}
+            loadingStage={loadingStage}
+            contextStatus={contextStatus}
+            debugPrompt={debugPrompt}
+            showDebug={showDebug}
+            setShowDebug={setShowDebug}
+            selectedModel={selectedModel}
+            hasBirthData={hasBirthData}
+            birthData={birthData}
+            messagesEndRef={messagesEndRef}
+            messagesContainerRef={messagesContainerRef}
+            onSendMessage={() => sendMessage(selectedModel)}
+            onKeyPress={handleKeyPress}
+            selectedPersona={selectedPersona}
+            onPersonaChange={setSelectedPersona}
+            ziweiData={ziweiData}
+            initializeChat={initializeChat}
+            stopGeneration={stopGeneration}
+            readingContext={readingContext}
+            onBackToChart={() => setCurrentPage('chart')}
+            onSelectedModelChange={setSelectedModel}
+          />
+        )}
+
+        {currentPage === 'rag' && <RagTest onBack={() => setCurrentPage('ai')} />}
+        {currentPage === 'model-test' && <div className="fp-utility-page"><button className="fp-secondary-button" onClick={() => setCurrentPage('ai')}>← 返回命理解读</button><ModelLatencyTest /></div>}
+      </main>
+
+      {savedCasesOpen && (
+        <div className="fp-modal-backdrop" onClick={() => setSavedCasesOpen(false)}>
+          <section className="fp-saved-modal" role="dialog" aria-modal="true" aria-labelledby="saved-cases-title" onClick={(event) => event.stopPropagation()}>
+            <div className="fp-modal-heading"><div><div className="fp-eyebrow">YOUR SAVED CHARTS</div><h2 id="saved-cases-title">我的命例</h2></div><button className="fp-modal-close" onClick={() => setSavedCasesOpen(false)} aria-label="关闭">×</button></div>
+            {savedCases.length === 0 ? <p className="fp-empty-cases">还没有保存的命例。排盘后可以在命盘页保存。</p> : (
+              <div className="fp-saved-list">
+                {savedCases.map((savedCase) => (
+                  <div className="fp-saved-item" key={savedCase.id}>
+                    <div><div className="fp-saved-name">{savedCase.name}</div><div className="fp-saved-meta">{savedCase.birthData.birthday} · {savedCase.birthData.gender === 'male' ? '男' : '女'}</div></div>
+                    <div className="fp-saved-actions">
+                      <button className="fp-primary-button" onClick={() => { setSavedCasesOpen(false); void handleLoadSavedCase(savedCase); }}>载入命例</button>
+                      <button className="fp-danger-button" onClick={(event) => handleDeleteSavedCase(savedCase.id, event)}>删除</button>
+                    </div>
+                  </div>
+                ))}
               </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {saveCaseOpen && (
+        <div className="fp-modal-backdrop" onClick={() => setSaveCaseOpen(false)}>
+          <section className="fp-saved-modal fp-save-case-modal" role="dialog" aria-modal="true" aria-labelledby="save-case-title" onClick={(event) => event.stopPropagation()}>
+            <div className="fp-modal-heading">
+              <div><div className="fp-eyebrow">SAVE YOUR CHART</div><h2 id="save-case-title">保存命例</h2></div>
+              <button className="fp-modal-close" onClick={() => setSaveCaseOpen(false)} aria-label="关闭">×</button>
             </div>
-          )}
-
-          <div className="md:hidden flex items-center justify-between mb-4">
-            <button
-              onClick={() => setMobileSidebarOpen(true)}
-              className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow flex items-center gap-2"
-            >
-              <span>☰</span>
-              <span className="text-sm font-bold">菜单</span>
-            </button>
-            <h1 className="text-lg font-bold text-purple-700 dark:text-purple-400">FatePilot</h1>
-            <div className="w-16" />
-          </div>
-
-          {currentPage === 'chart' ? (
-            <ChartView
-              ziweiData={ziweiData}
-              birthData={birthData}
-              selectedDecadal={selectedDecadal}
-              setSelectedDecadal={setSelectedDecadal}
-              selectedYear={selectedYear}
-              setSelectedYear={setSelectedYear}
-              savedCases={savedCases}
-              showSavedCases={showSavedCases}
-              setShowSavedCases={setShowSavedCases}
-              onSaveCase={handleSaveCurrentCase}
-              onLoadCase={handleLoadSavedCase}
-              onDeleteCase={handleDeleteSavedCase}
-              onYearChange={handleHoroscopeYearChange}
-              onTestAIPrompt={handleTestAIPrompt}
-            />
-          ) : currentPage === 'ai' ? (
-            <div className="h-full min-h-0 overflow-y-auto md:overflow-hidden show-scrollbar">
-              <AIFortuneTeller
-                messages={messages}
-                inputMessage={inputMessage}
-                setInputMessage={setInputMessage}
-                isLoading={isLoading}
-                loadingStage={loadingStage}
-                contextStatus={contextStatus}
-                debugPrompt={debugPrompt}
-                showDebug={showDebug}
-                setShowDebug={setShowDebug}
-                selectedModel={selectedModel}
-                hasBirthData={hasBirthData}
-                birthData={birthData}
-                messagesEndRef={messagesEndRef}
-                messagesContainerRef={messagesContainerRef}
-                onSendMessage={() => sendMessage(selectedModel)}
-                onKeyPress={handleKeyPress}
-                onSaveHistory={() => saveChatHistory(birthData?.birthday || '', birthData?.gender || '')}
-                onLoadHistory={loadChatHistory}
-                setMessages={setMessages}
-                selectedPersona={selectedPersona}
-                onPersonaChange={setSelectedPersona}
-                ziweiData={ziweiData}
-                initializeChat={initializeChat}
-                stopGeneration={stopGeneration}
+            <p className="fp-save-case-hint">为这张命盘起一个容易辨认的名称。</p>
+            <form onSubmit={confirmSaveCurrentCase}>
+              <label className="fp-save-case-label" htmlFor="saved-case-name">命例名称</label>
+              <input
+                autoFocus
+                id="saved-case-name"
+                className="fp-save-case-input"
+                value={caseName}
+                onChange={(event) => setCaseName(event.target.value)}
+                placeholder="例如：自己、家人或客户"
+                maxLength={40}
+                required
               />
-            </div>
-          ) : currentPage === 'rag' ? (
-            <RagTest onBack={() => setCurrentPage('ai')} />
-          ) : (
-            <ModelLatencyTest />
-          )}
-        </main>
-      </div>
-
-      {!isMobile ? null : (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#1a2a2a] border-t border-gray-200 dark:border-gray-700 z-30">
-          <div className="flex justify-around py-2">
-            <button
-              onClick={() => setCurrentPage('chart')}
-              className={`flex flex-col items-center p-2 ${currentPage === 'chart' ? 'text-purple-600' : 'text-gray-600'}`}
-            >
-              <span className="text-lg">📊</span>
-              <span className="text-xs">命盘</span>
-            </button>
-            <button
-              onClick={() => setCurrentPage('ai')}
-              className={`flex flex-col items-center p-2 ${currentPage === 'ai' ? 'text-purple-600' : 'text-gray-600'}`}
-            >
-              <span className="text-lg">🤖</span>
-              <span className="text-xs">AI</span>
-            </button>
-            <button
-              onClick={() => setCurrentPage('rag')}
-              className={`flex flex-col items-center p-2 ${currentPage === 'rag' ? 'text-purple-600' : 'text-gray-600'}`}
-            >
-              <span className="text-lg">🔍</span>
-              <span className="text-xs">RAG</span>
-            </button>
-            <button
-              onClick={() => setCurrentPage('model-test')}
-              className={`flex flex-col items-center p-2 ${currentPage === 'model-test' ? 'text-purple-600' : 'text-gray-600'}`}
-            >
-              <span className="text-lg">⚡</span>
-              <span className="text-xs">测速</span>
-            </button>
-          </div>
+              <div className="fp-save-case-actions">
+                <button type="button" className="fp-secondary-button" onClick={() => setSaveCaseOpen(false)}>取消</button>
+                <button type="submit" className="fp-primary-button">保存命例</button>
+              </div>
+            </form>
+          </section>
         </div>
       )}
     </div>

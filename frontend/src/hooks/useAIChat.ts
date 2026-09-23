@@ -4,11 +4,17 @@ import type { ContextStatus, ZiweiData } from '@/types';
 
 type LoadingStage = 'context' | 'model';
 
+function appendReadingContext(prompt: string, context: string): string {
+  if (!context.trim()) return prompt;
+  return `${prompt}\n\n【用户本次选择的解读范围】\n${context}`;
+}
+
 export function useAIChat(
   ziweiData: ZiweiData | null,
   horoscopeYear: number,
   resolveZiweiData?: () => Promise<ZiweiData | null>,
   contextStatus: ContextStatus = 'idle',
+  readingContext = '',
 ) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -21,9 +27,10 @@ export function useAIChat(
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const initializeChat = async (data: ZiweiData, persona?: PersonaType) => {
+  const initializeChat = async (data: ZiweiData, persona?: PersonaType, contextOverride?: string) => {
     const currentPersona = persona || selectedPersona;
-    const fullPrompt = await generateMasterPrompt('请分析我的命盘', data, data?.targetYear || horoscopeYear, currentPersona);
+    const basePrompt = await generateMasterPrompt('请分析我的命盘', data, data?.targetYear || horoscopeYear, currentPersona);
+    const fullPrompt = appendReadingContext(basePrompt, contextOverride ?? readingContext);
 
     setMessages([
       { role: 'system', content: fullPrompt },
@@ -39,7 +46,8 @@ export function useAIChat(
   };
 
   const updateChatForHoroscope = async (data: ZiweiData) => {
-    const fullPrompt = await generateMasterPrompt('请分析我的命盘', data, data?.targetYear || horoscopeYear, selectedPersona);
+    const basePrompt = await generateMasterPrompt('请分析我的命盘', data, data?.targetYear || horoscopeYear, selectedPersona);
+    const fullPrompt = appendReadingContext(basePrompt, readingContext);
 
     setMessages([
       { role: 'system', content: fullPrompt },
@@ -72,7 +80,7 @@ export function useAIChat(
       const resolvedZiweiData = resolveZiweiData ? await resolveZiweiData() : ziweiData;
       setLoadingStage('model');
 
-      const systemPrompt = resolvedZiweiData
+      const basePrompt = resolvedZiweiData
         ? await generateMasterPrompt(
             inputMessage,
             resolvedZiweiData,
@@ -80,6 +88,7 @@ export function useAIChat(
             selectedPersona,
           )
         : getDefaultSystemPrompt();
+      const systemPrompt = appendReadingContext(basePrompt, readingContext);
 
       const dynamicMessages: Message[] = [
         { role: 'system', content: systemPrompt },
@@ -184,47 +193,6 @@ export function useAIChat(
     }
   };
 
-  const saveChatHistory = (birthDate: string, gender: string) => {
-    if (messages.length === 0) return;
-
-    const chatData = {
-      birth_date: birthDate,
-      gender,
-      messages: messages.filter((message) => message.role !== 'system'),
-      timestamp: new Date().toLocaleString('zh-CN'),
-    };
-
-    const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ziwei_chat_${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const loadChatHistory = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const chatData = JSON.parse(e.target?.result as string);
-        if (chatData.messages) {
-          setMessages(chatData.messages);
-        }
-      } catch (error) {
-        console.error('加载聊天历史失败:', error);
-        alert('聊天历史文件格式错误');
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
-  };
-
   return {
     messages,
     setMessages,
@@ -241,8 +209,6 @@ export function useAIChat(
     initializeChat,
     updateChatForHoroscope,
     sendMessage,
-    saveChatHistory,
-    loadChatHistory,
     stopGeneration,
   };
 }
