@@ -1,7 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const EMBEDDING_MODEL = 'tongyi-embedding-vision-flash-2026-03-06';
-const EMBEDDING_URL = 'https://dashscope.aliyuncs.com/api/v1/services/embeddings/multimodal-embedding/multimodal-embedding';
+const EMBEDDING_MODEL = 'qwen3.7-text-embedding';
+const EMBEDDING_URL = 'https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding';
 
 class RetrievalService {
   constructor() {
@@ -57,9 +57,7 @@ class RetrievalService {
       },
       body: JSON.stringify({
         model: EMBEDDING_MODEL,
-        input: {
-          contents: [{ text }],
-        },
+        input: { texts: [text] },
       }),
     });
 

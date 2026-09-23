@@ -8,7 +8,7 @@ class VectorStore {
     this.documents = [];
     this.apiKey = process.env.DASHSCOPE_API_KEY || '';
     this.rerankUrl = 'https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank';
-    this.embeddingUrl = 'https://dashscope.aliyuncs.com/api/v1/services/embeddings/multimodal-embedding/multimodal-embedding';
+    this.embeddingUrl = 'https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding';
   }
 
   // 向量化文本
@@ -17,12 +17,8 @@ class VectorStore {
       const response = await axios.post(
         this.embeddingUrl,
         {
-          model: "multimodal-embedding-v1",
-          input: {
-            contents: [
-              { text: text }
-            ]
-          }
+          model: "qwen3.7-text-embedding",
+          input: { texts: [text] }
         },
         {
           headers: {

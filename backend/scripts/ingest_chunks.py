@@ -16,10 +16,9 @@ dashscope.api_key = DASHSCOPE_API_KEY
 
 def embed_text(text: str) -> list:
     try:
-        input_data = [{'text': text}]
-        resp = dashscope.MultiModalEmbedding.call(
-            model="tongyi-embedding-vision-flash-2026-03-06",
-            input=input_data
+        resp = dashscope.TextEmbedding.call(
+            model="qwen3.7-text-embedding",
+            input=text
         )
         if resp.status_code == 200 and hasattr(resp, 'output') and resp.output:
             return resp.output['embeddings'][0]['embedding']

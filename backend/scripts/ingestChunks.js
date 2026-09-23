@@ -13,10 +13,10 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 async function embedText(text) {
   try {
     const response = await axios.post(
-      'https://dashscope.aliyuncs.com/api/v1/services/embeddings/multimodal-embedding/multimodal-embedding',
+      'https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding',
       {
-        model: 'multimodal-embedding-v1',
-        input: { contents: [{ text }] }
+        model: 'qwen3.7-text-embedding',
+        input: { texts: [text] }
       },
       {
         headers: {

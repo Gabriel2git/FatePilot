@@ -18,10 +18,9 @@ def test_embedding():
     print("\n=== 测试 DashScope Embedding ===")
     try:
         text = "紫微斗數命宮"
-        input_data = [{'text': text}]
-        resp = dashscope.MultiModalEmbedding.call(
-            model="tongyi-embedding-vision-flash-2026-03-06",
-            input=input_data
+        resp = dashscope.TextEmbedding.call(
+            model="qwen3.7-text-embedding",
+            input=text
         )
         print(f"API状态码: {resp.status_code}")
         if hasattr(resp, 'output') and resp.output:

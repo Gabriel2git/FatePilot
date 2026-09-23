@@ -7,7 +7,7 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- 2. 创建 chunks 表
--- 注意: tongyi-embedding-vision-flash-2026-03-06 输出 768 维向量
+-- 注意: embedding 列和 match 函数的维度必须与所用模型返回的向量维数一致（当前 schema 为 768 维）
 DROP TABLE IF EXISTS ziwei_chunks;
 CREATE TABLE ziwei_chunks (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
