@@ -149,9 +149,9 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
   const minutes = Array.from({ length: 12 }, (_, i) => i * 5);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="fp-birth-form-fields space-y-4">
       {justSubmitted && (
-        <div className="rounded-lg border border-blue-300 bg-blue-50 text-blue-800 text-xs px-3 py-2 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-300">
+        <div className="fp-form-submitted rounded-lg text-xs px-3 py-2">
           已提交，正在排盘中。请稍候，表单信息已保留。
         </div>
       )}
@@ -159,23 +159,23 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
       <div className="space-y-2">
         <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">选择历法</label>
         <div className="flex gap-2">
-          <label className="flex items-center cursor-pointer bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-lg border-2 border-transparent hover:border-purple-300 dark:hover:border-purple-700 transition-all text-sm">
+          <label className={`fp-choice-pill flex items-center cursor-pointer px-3 py-2 rounded-lg transition-all text-sm ${!form.isLunar ? 'is-selected' : ''}`}>
             <input
               type="radio"
               checked={!form.isLunar}
               onChange={() => setForm((prev) => ({ ...prev, isLunar: false }))}
-              className="mr-2 text-purple-600"
+              className="mr-2"
             />
-            <span className="text-gray-900 dark:text-gray-100">阳历（推荐）</span>
+            <span>阳历（推荐）</span>
           </label>
-          <label className="flex items-center cursor-pointer bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-lg border-2 border-transparent hover:border-purple-300 dark:hover:border-purple-700 transition-all text-sm">
+          <label className={`fp-choice-pill flex items-center cursor-pointer px-3 py-2 rounded-lg transition-all text-sm ${form.isLunar ? 'is-selected' : ''}`}>
             <input
               type="radio"
               checked={form.isLunar}
               onChange={() => setForm((prev) => ({ ...prev, isLunar: true }))}
-              className="mr-2 text-purple-600"
+              className="mr-2"
             />
-            <span className="text-gray-900 dark:text-gray-100">农历</span>
+            <span>农历</span>
           </label>
         </div>
       </div>
@@ -186,7 +186,7 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
           <select
             value={form.year}
             onChange={(e) => setForm((prev) => ({ ...prev, year: Number(e.target.value) }))}
-            className={`flex-1 min-w-[90px] p-2 border-2 ${errors.date ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm`}
+            className={`fp-form-select flex-1 min-w-[90px] p-2 rounded-lg focus:outline-none transition-all text-sm ${errors.date ? 'has-error' : ''}`}
           >
             {years.map((year) => (
               <option key={year} value={year} className="text-gray-900 dark:text-gray-100">
@@ -197,7 +197,7 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
           <select
             value={form.month}
             onChange={(e) => setForm((prev) => ({ ...prev, month: Number(e.target.value) }))}
-            className={`flex-1 min-w-[60px] p-2 border-2 ${errors.date ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm`}
+            className={`fp-form-select flex-1 min-w-[60px] p-2 rounded-lg focus:outline-none transition-all text-sm ${errors.date ? 'has-error' : ''}`}
           >
             {months.map((month) => (
               <option key={month} value={month} className="text-gray-900 dark:text-gray-100">
@@ -208,7 +208,7 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
           <select
             value={form.day}
             onChange={(e) => setForm((prev) => ({ ...prev, day: Number(e.target.value) }))}
-            className={`flex-1 min-w-[60px] p-2 border-2 ${errors.date ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm`}
+            className={`fp-form-select flex-1 min-w-[60px] p-2 rounded-lg focus:outline-none transition-all text-sm ${errors.date ? 'has-error' : ''}`}
           >
             {days.map((day) => (
               <option key={day} value={day} className="text-gray-900 dark:text-gray-100">
@@ -221,14 +221,14 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
       </div>
 
       {form.isLunar && (
-        <div className="flex items-center bg-amber-50 dark:bg-amber-900/20 p-2 rounded-lg">
+        <div className="fp-form-note fp-form-note-warm flex items-center p-2 rounded-lg">
           <input
             type="checkbox"
             checked={form.isLeap}
             onChange={(e) => setForm((prev) => ({ ...prev, isLeap: e.target.checked }))}
-            className="mr-2 w-4 h-4 text-purple-600"
+            className="mr-2 w-4 h-4"
           />
-          <label className="text-xs text-amber-900 dark:text-amber-400 font-medium">闰月出生（例如：闰四月）</label>
+          <label className="text-xs font-medium">闰月出生（例如：闰四月）</label>
         </div>
       )}
 
@@ -238,7 +238,7 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
           <select
             value={form.hour}
             onChange={(e) => setForm((prev) => ({ ...prev, hour: Number(e.target.value) }))}
-            className="flex-1 min-w-[80px] p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm"
+            className="fp-form-select flex-1 min-w-[80px] p-2 rounded-lg focus:outline-none transition-all text-sm"
           >
             {hours.map((hour) => (
               <option key={hour} value={hour} className="text-gray-900 dark:text-gray-100">
@@ -246,11 +246,11 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
               </option>
             ))}
           </select>
-          <span className="text-xl text-gray-400 dark:text-gray-500 font-light">:</span>
+          <span className="fp-time-separator text-xl font-light">:</span>
           <select
             value={form.minute}
             onChange={(e) => setForm((prev) => ({ ...prev, minute: Number(e.target.value) }))}
-            className="flex-1 min-w-[80px] p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm"
+            className="fp-form-select flex-1 min-w-[80px] p-2 rounded-lg focus:outline-none transition-all text-sm"
           >
             {minutes.map((minute) => (
               <option key={minute} value={minute} className="text-gray-900 dark:text-gray-100">
@@ -260,10 +260,10 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
           </select>
         </div>
 
-        <div className="bg-purple-50 dark:bg-purple-900/30 p-2 rounded-lg border border-purple-200 dark:border-purple-800/50">
+        <div className="fp-form-note fp-form-note-accent p-2 rounded-lg">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-purple-800 dark:text-purple-400">对应时辰</span>
-            <span className="text-sm font-bold text-purple-700 dark:text-purple-400">{shichen}</span>
+            <span className="text-xs font-semibold">对应时辰</span>
+            <span className="fp-form-note-value text-sm font-bold">{shichen}</span>
           </div>
         </div>
       </div>
@@ -273,7 +273,7 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
         <select
           value={form.selectedCity}
           onChange={(e) => setForm((prev) => ({ ...prev, selectedCity: e.target.value }))}
-          className="w-full p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm"
+          className="fp-form-select w-full p-2 rounded-lg focus:outline-none transition-all text-sm"
         >
           {cities.map((city) => (
             <option key={city.value} value={city.value} className="text-gray-900 dark:text-gray-100">
@@ -288,15 +288,15 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
             value={form.customLongitude}
             onChange={(e) => setForm((prev) => ({ ...prev, customLongitude: e.target.value }))}
             placeholder="请输入经度（如 116.41）"
-            className={`w-full p-2 border-2 ${errors.longitude ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} rounded-lg focus:border-purple-500 focus:outline-none transition-all text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-sm`}
+            className={`fp-form-select w-full p-2 rounded-lg focus:outline-none transition-all text-sm ${errors.longitude ? 'has-error' : ''}`}
           />
         )}
         {errors.longitude && <p className="text-xs text-red-500 dark:text-red-400">{errors.longitude}</p>}
 
-        <div className="bg-blue-50 dark:bg-blue-900/30 p-2 rounded-lg border border-blue-200 dark:border-blue-800/50">
+        <div className="fp-form-note fp-form-note-neutral p-2 rounded-lg">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-blue-800 dark:text-blue-400">当前经度</span>
-            <span className="text-sm font-bold text-blue-700 dark:text-blue-400">{getLongitude().toFixed(2)}</span>
+            <span className="text-xs font-semibold">当前经度</span>
+            <span className="fp-form-note-value text-sm font-bold">{getLongitude().toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -304,25 +304,25 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
       <div className="space-y-2">
         <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">性别</label>
         <div className="flex gap-2">
-          <label className="flex items-center cursor-pointer bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-lg border-2 border-transparent hover:border-pink-300 dark:hover:border-pink-700 transition-all flex-1 justify-center text-sm">
+          <label className={`fp-choice-pill flex items-center cursor-pointer px-3 py-2 rounded-lg transition-all flex-1 justify-center text-sm ${form.gender === 'female' ? 'is-selected' : ''}`}>
             <input
               type="radio"
               value="female"
               checked={form.gender === 'female'}
               onChange={() => setForm((prev) => ({ ...prev, gender: 'female' }))}
-              className="mr-2 text-pink-600"
+              className="mr-2"
             />
-            <span className="text-gray-900 dark:text-gray-100">女</span>
+            <span>女</span>
           </label>
-          <label className="flex items-center cursor-pointer bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-lg border-2 border-transparent hover:border-blue-300 dark:hover:border-blue-700 transition-all flex-1 justify-center text-sm">
+          <label className={`fp-choice-pill flex items-center cursor-pointer px-3 py-2 rounded-lg transition-all flex-1 justify-center text-sm ${form.gender === 'male' ? 'is-selected' : ''}`}>
             <input
               type="radio"
               value="male"
               checked={form.gender === 'male'}
               onChange={() => setForm((prev) => ({ ...prev, gender: 'male' }))}
-              className="mr-2 text-blue-600"
+              className="mr-2"
             />
-            <span className="text-gray-900 dark:text-gray-100">男</span>
+            <span>男</span>
           </label>
         </div>
       </div>
@@ -330,7 +330,7 @@ export default function BirthForm({ onDataLoaded }: BirthFormProps) {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-xl font-bold text-base hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+        className="fp-form-submit w-full text-white py-3 rounded-xl font-bold text-base transition-all disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {loading ? (
           <div className="flex items-center justify-center gap-2">

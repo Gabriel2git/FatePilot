@@ -145,10 +145,21 @@ body {
 .fp-input-card-head span { color: var(--fp-muted); font-size: 10px; }
 .fp-birth-form form { color: var(--fp-ink); }
 .fp-birth-form form label { color: var(--fp-ink); }
-.fp-birth-form form select,.fp-birth-form form input:not([type='radio']) { border-color: var(--fp-line) !important; border-radius: 8px !important; background: var(--fp-card) !important; color: var(--fp-ink) !important; }
+.fp-birth-form .fp-form-select,.fp-birth-form form input[type='text'] { min-height: 42px; border: 1px solid var(--fp-line) !important; border-radius: 8px !important; background: var(--fp-card) !important; color: var(--fp-ink) !important; }
 .fp-birth-form form input[type='radio'] { accent-color: var(--fp-red); }
-.fp-birth-form form .text-purple-600,.fp-birth-form form .text-purple-700 { color: var(--fp-red) !important; }
-.fp-birth-form form > button { border: 0 !important; border-radius: 8px !important; background: var(--fp-red) !important; color: white !important; box-shadow: none !important; }
+.fp-birth-form form input[type='checkbox'] { accent-color: var(--fp-red); }
+.fp-birth-form .fp-form-select:focus,.fp-birth-form form input[type='text']:focus { border-color: var(--fp-gold) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--fp-gold) 16%, transparent); outline: none; }
+.fp-birth-form .fp-choice-pill { min-height: 42px; border: 1px solid var(--fp-line); background: color-mix(in srgb, var(--fp-paper) 62%, var(--fp-card)); color: var(--fp-ink); }
+.fp-birth-form .fp-choice-pill:hover { border-color: var(--fp-gold); background: var(--fp-card); }
+.fp-birth-form .fp-choice-pill.is-selected { border-color: color-mix(in srgb, var(--fp-red) 34%, var(--fp-line)); background: var(--fp-red-soft); color: var(--fp-red); }
+.fp-birth-form .fp-form-note { border: 1px solid var(--fp-line); border-radius: 8px; font-size: 12px; }
+.fp-birth-form .fp-form-note-accent { border-color: color-mix(in srgb, var(--fp-gold) 36%, var(--fp-line)); background: color-mix(in srgb, var(--fp-gold) 11%, var(--fp-card)); color: var(--fp-ink); }
+.fp-birth-form .fp-form-note-neutral { border-color: color-mix(in srgb, var(--fp-moss) 28%, var(--fp-line)); background: color-mix(in srgb, var(--fp-moss) 9%, var(--fp-card)); color: var(--fp-moss); }
+.fp-birth-form .fp-form-note-warm,.fp-birth-form .fp-form-submitted { border: 1px solid color-mix(in srgb, var(--fp-gold) 34%, var(--fp-line)); background: color-mix(in srgb, var(--fp-gold) 10%, var(--fp-card)); color: var(--fp-ink); }
+.fp-birth-form .fp-form-note-value { color: var(--fp-red); }
+.fp-birth-form .fp-time-separator { color: var(--fp-gold); }
+.fp-birth-form .fp-form-submit { min-height: 48px; border: 1px solid var(--fp-red); border-radius: 9px !important; background: var(--fp-red) !important; color: white !important; box-shadow: none !important; }
+.fp-birth-form .text-red-500,.fp-birth-form .text-red-400 { color: var(--fp-red) !important; }
 .fp-birth-form form button:hover { filter: brightness(.94); }
 .fp-flow-card { padding: 23px; }
 .fp-flow-card h2 { margin: 0 0 7px; color: var(--fp-ink); }
