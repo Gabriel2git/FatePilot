@@ -1,6 +1,7 @@
 ﻿﻿﻿﻿﻿﻿﻿import { useMemo, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import ZiweiChart from '@/components/ZiweiChart';
+import { getDefaultYearForDecadal, getYearsInDecadal } from '@/lib/fortunePeriods';
 
 interface BirthData {
   birthday: string;
@@ -48,10 +49,6 @@ interface ChartViewProps {
   onStartReading: () => void;
   scope: 'natal' | 'decadal' | 'yearly';
   setScope: (scope: 'natal' | 'decadal' | 'yearly') => void;
-}
-
-function getDecadalStartYear(targetYear: number, currentNominalAge: number, decadalStartAge: number): number {
-  return targetYear - (currentNominalAge - decadalStartAge);
 }
 
 export default function ChartView({
@@ -115,9 +112,9 @@ export default function ChartView({
   };
 
   const handleSelectDecadal = (item: any) => {
-    if (!ziweiData?.horoscope?.age?.nominalAge || !ziweiData?.targetYear) {
-      return;
-    }
+    const targetYear = Number(ziweiData?.targetYear);
+    const nominalAge = Number(ziweiData?.horoscope?.age?.nominalAge);
+    if (!Number.isFinite(nominalAge) || !Number.isFinite(targetYear)) return;
 
     const decadalInfo: DecadalInfo = {
       start: item.start,
@@ -126,39 +123,35 @@ export default function ChartView({
       branch: item.branch,
     };
 
-    if (selectedDecadal && selectedDecadal.start === decadalInfo.start) {
-      setSelectedDecadal(null);
-      setSelectedYear(null);
-      setScope('natal');
-      onYearChange?.(new Date().getFullYear());
-      return;
-    }
+    if (selectedDecadal?.start === decadalInfo.start && selectedDecadal?.end === decadalInfo.end) return;
 
     setSelectedDecadal(decadalInfo);
     setScope('decadal');
 
-    const firstYear = getDecadalStartYear(
-      Number(ziweiData.targetYear),
-      Number(ziweiData.horoscope.age.nominalAge),
-      Number(decadalInfo.start),
+    const targetYearForDecadal = getDefaultYearForDecadal(
+      targetYear,
+      nominalAge,
+      [decadalInfo.start, decadalInfo.end],
     );
-    setSelectedYear(firstYear);
-    onYearChange?.(firstYear);
+    if (targetYearForDecadal === null) return;
+    setSelectedYear(targetYearForDecadal);
+    onYearChange?.(targetYearForDecadal);
   };
 
   const yearsOfSelectedDecadal = useMemo(() => {
-    if (!selectedDecadal || !ziweiData?.horoscope?.age?.nominalAge || !ziweiData?.targetYear) {
+    if (
+      !selectedDecadal ||
+      !Number.isFinite(ziweiData?.horoscope?.age?.nominalAge) ||
+      !Number.isFinite(ziweiData?.targetYear)
+    ) {
       return [] as number[];
     }
 
-    const startYear = getDecadalStartYear(
+    return getYearsInDecadal(
       Number(ziweiData.targetYear),
       Number(ziweiData.horoscope.age.nominalAge),
-      Number(selectedDecadal.start),
+      [Number(selectedDecadal.start), Number(selectedDecadal.end)],
     );
-
-    const totalYears = Number(selectedDecadal.end) - Number(selectedDecadal.start) + 1;
-    return Array.from({ length: Math.max(totalYears, 0) }, (_, index) => startYear + index);
   }, [selectedDecadal, ziweiData?.horoscope?.age?.nominalAge, ziweiData?.targetYear]);
 
   const activePalace =
@@ -214,7 +207,11 @@ export default function ChartView({
               }}>本命</button>
               <button className={scope === 'decadal' ? 'active' : ''} onClick={() => setScope('decadal')}>大限</button>
               <button className={scope === 'yearly' ? 'active' : ''} onClick={() => setScope('yearly')}>流年</button>
-              <span>{scope === 'natal' ? '本命结构' : selectedDecadal ? `${selectedDecadal.start}–${selectedDecadal.end} 岁` : `${selectedYear || horoscopeYear} 年`}</span>
+              <span>{scope === 'natal'
+                ? '本命结构'
+                : scope === 'decadal'
+                  ? selectedDecadal ? `${selectedDecadal.start}–${selectedDecadal.end} 岁大限` : '请选择大限'
+                  : `${selectedYear || horoscopeYear} 年流年`}</span>
             </div>
 
             {scope === 'decadal' && (
@@ -255,12 +252,13 @@ export default function ChartView({
                 ziweiData={{
                   astrolabe: ziweiData?.astrolabe,
                   horoscope: scope === 'natal' ? undefined : ziweiData?.horoscope,
+                  targetYear: scope === 'natal' ? undefined : ziweiData?.targetYear,
                 }}
-                selectedPalace={activePalace?.name || null}
+                selectedPalace={selectedPalace?.name || null}
                 onSelectPalace={setSelectedPalace}
               />
             </div>
-            <div className="fp-chart-legend"><span><i className="fp-dot-red" />流年宫位</span><span><i className="fp-dot-gold" />大限宫位</span><span>四化标记随运限同步变化</span></div>
+            <div className="fp-chart-legend"><span><i className="fp-dot-red" />流年宫位</span><span><i className="fp-dot-gold" />大限宫位</span><span><i className="fp-dot-selected" />选中宫位</span><span>四化标记随运限同步变化</span></div>
           </section>
 
           <aside className="fp-palace-detail">

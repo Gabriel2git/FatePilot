@@ -7,6 +7,7 @@ interface ZiweiChartProps {
   ziweiData: {
     astrolabe: any;
     horoscope?: any;
+    targetYear?: number;
   };
   selectedPalace?: string | null;
   onSelectPalace?: (palace: any) => void;
@@ -48,7 +49,7 @@ export default function ZiweiChart({ ziweiData, selectedPalace, onSelectPalace }
       })}
 
       <div className="col-start-2 col-span-2 row-start-2 row-span-2 fp-chart-center relative z-10">
-        <CenterInfo astrolabe={astrolabe} horoscope={horoscope} />
+        <CenterInfo astrolabe={astrolabe} horoscope={horoscope} targetYear={ziweiData.targetYear} />
       </div>
     </div>
   );

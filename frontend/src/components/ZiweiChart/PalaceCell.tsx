@@ -1,8 +1,7 @@
 ﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import React from 'react';
 
 const MUTAGEN_LABELS = ['禄', '权', '科', '忌'];
-const PALACE_NAMES = ['命宫', '兄弟', '夫妻', '子女', '财帛', '疾厄', '迁移', '交友', '官禄', '田宅', '福德', '父母'];
-const EARTHLY_BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+import { getDynamicPalaceName } from '@/lib/fortunePeriods';
 
 interface PalaceCellProps {
   palace: any;
@@ -10,17 +9,6 @@ interface PalaceCellProps {
   earthlyBranchOfBodyPalace?: string;
   birthYearStem?: string;
   isSelected?: boolean;
-}
-
-function getDynamicPalaceName(currentBranch: string, targetLifeBranch?: string) {
-  if (!targetLifeBranch) return null;
-  const currentIndex = EARTHLY_BRANCHES.indexOf(currentBranch);
-  const lifeIndex = EARTHLY_BRANCHES.indexOf(targetLifeBranch);
-  if (currentIndex === -1 || lifeIndex === -1) return null;
-
-  const clockwiseDistance = (currentIndex - lifeIndex + 12) % 12;
-  const palaceIndex = (12 - clockwiseDistance) % 12;
-  return PALACE_NAMES[palaceIndex];
 }
 
 function getMutagenTag(starName: string, mutagen: string[] | undefined): string | null {
@@ -67,8 +55,8 @@ export default function PalaceCell({ palace, horoscope, earthlyBranchOfBodyPalac
   const isBodyPalace = palace.earthlyBranch === earthlyBranchOfBodyPalace;
   const isOriginPalace = palace.heavenlyStem === birthYearStem;
 
-  const decadalPalace = getDynamicPalaceName(palace.earthlyBranch, horoscope?.decadal?.earthlyBranch);
-  const yearlyPalace = getDynamicPalaceName(palace.earthlyBranch, horoscope?.yearly?.earthlyBranch);
+  const decadalPalace = getDynamicPalaceName(palace.index, horoscope?.decadal?.palaceNames);
+  const yearlyPalace = getDynamicPalaceName(palace.index, horoscope?.yearly?.palaceNames);
 
   const decadalMutagen = horoscope?.decadal?.mutagen;
   const yearlyMutagen = horoscope?.yearly?.mutagen;
@@ -76,12 +64,8 @@ export default function PalaceCell({ palace, horoscope, earthlyBranchOfBodyPalac
   return (
     <div
       className={`fp-palace-cell w-full h-full p-0.5 sm:p-1.5 flex flex-col justify-between ${
-        isCurrentYearly
-          ? 'border-2 border-[#a44135] bg-[#f6e9e4]'
-          : isCurrentDecadal
-            ? 'border-2 border-[#a58a58] bg-[#f5f0e5]'
-            : 'border border-[#e4dece] bg-[#fffdf8]'
-      } ${isSelected ? 'ring-2 ring-inset ring-[#a44135]' : ''}`}
+        isCurrentYearly ? 'is-current-yearly' : ''
+      } ${isCurrentDecadal ? 'is-current-decadal' : ''} ${isSelected ? 'is-selected' : ''}`}
     >
       <div className="flex flex-col gap-0.5">
         <div className="flex flex-wrap gap-0.5 content-start">

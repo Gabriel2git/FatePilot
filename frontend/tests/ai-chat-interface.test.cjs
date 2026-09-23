@@ -7,6 +7,9 @@ const source = (file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8
 const page = source('src/app/page.tsx');
 const styles = source('src/app/globals.css');
 const chat = source('src/components/AIChat/index.tsx');
+const chart = source('src/components/ChartView/index.tsx');
+const palaceCell = source('src/components/ZiweiChart/PalaceCell.tsx');
+const centerInfo = source('src/components/ZiweiChart/CenterInfo.tsx');
 
 test('tools menu closes on outside pointer and Escape', () => {
   assert.match(page, /addEventListener\('pointerdown', closeOnOutsidePointer\)/);
@@ -29,4 +32,18 @@ test('chat text is reduced and only prompt debugging remains in the tools menu',
   assert.match(styles, /\.fp-chat-message\s*\{[^}]*font-size:\s*14px/s);
   assert.match(page, /setShowDebug\(true\).*调试提示词/s);
   assert.doesNotMatch(chat, /导出|导入/);
+});
+
+test('decade selection keeps the reference year when it belongs to that decade', () => {
+  assert.match(chart, /getDefaultYearForDecadal\(/);
+  assert.match(chart, /getYearsInDecadal\(/);
+  assert.match(chart, /if \(selectedDecadal\?\.start === decadalInfo\.start && selectedDecadal\?\.end === decadalInfo\.end\) return/);
+});
+
+test('chart labels follow iztro palace-name arrays and separate selection from annual highlighting', () => {
+  assert.match(palaceCell, /horoscope\?\.yearly\?\.palaceNames/);
+  assert.match(palaceCell, /horoscope\?\.decadal\?\.palaceNames/);
+  assert.match(palaceCell, /isCurrentYearly \? 'is-current-yearly'/);
+  assert.match(chart, /selectedPalace=\{selectedPalace\?\.name \|\| null\}/);
+  assert.match(centerInfo, /推演年份：/);
 });
