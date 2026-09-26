@@ -194,7 +194,7 @@ export default function ChartView({
             <div className="fp-chart-card-head">
               <div>
                 <strong>十二宫位</strong>
-                <span>点击宫位，查看星曜与主题</span>
+                <span>点击宫位查看三方四正虚线与宫位详情</span>
               </div>
               {isRefreshingData && <span className="fp-refreshing">正在更新运限…</span>}
             </div>
@@ -251,14 +251,14 @@ export default function ChartView({
               <ZiweiChart
                 ziweiData={{
                   astrolabe: ziweiData?.astrolabe,
-                  horoscope: scope === 'natal' ? undefined : ziweiData?.horoscope,
-                  targetYear: scope === 'natal' ? undefined : ziweiData?.targetYear,
+                  horoscope: ziweiData?.horoscope,
+                  targetYear: ziweiData?.targetYear,
                 }}
                 selectedPalace={selectedPalace?.name || null}
                 onSelectPalace={setSelectedPalace}
               />
             </div>
-            <div className="fp-chart-legend"><span><i className="fp-dot-red" />流年宫位</span><span><i className="fp-dot-gold" />大限宫位</span><span><i className="fp-dot-selected" />选中宫位</span><span>四化标记随运限同步变化</span></div>
+            <div className="fp-chart-legend"><span><i className="fp-dot-red" />流年宫位</span><span><i className="fp-dot-gold" />大限宫位</span><span><i className="fp-dot-selected" />选中宫位</span><span><i className="fp-dot-trine" />三方四正</span><span><i className="fp-dot-self" />↗ 自化</span><span><i className="fp-dot-considered" />↙ 视同自化</span></div>
           </section>
 
           <aside className="fp-palace-detail">

@@ -10,6 +10,7 @@ const chat = source('src/components/AIChat/index.tsx');
 const chart = source('src/components/ChartView/index.tsx');
 const palaceCell = source('src/components/ZiweiChart/PalaceCell.tsx');
 const centerInfo = source('src/components/ZiweiChart/CenterInfo.tsx');
+const chartDecorations = source('src/components/ZiweiChart/chartDecorations.ts');
 
 test('tools menu closes on outside pointer and Escape', () => {
   assert.match(page, /addEventListener\('pointerdown', closeOnOutsidePointer\)/);
@@ -46,4 +47,24 @@ test('chart labels follow iztro palace-name arrays and separate selection from a
   assert.match(palaceCell, /isCurrentYearly \? 'is-current-yearly'/);
   assert.match(chart, /selectedPalace=\{selectedPalace\?\.name \|\| null\}/);
   assert.match(centerInfo, /推演年份：/);
+});
+
+test('chart separates star brightness and natal, decade, and yearly transformation rows', () => {
+  assert.match(styles, /\.fp-palace-star\s*\{[^}]*writing-mode:\s*vertical-rl/s);
+  assert.match(palaceCell, /aria-label="亮度"/);
+  assert.match(palaceCell, /aria-label="本命四化"/);
+  assert.match(palaceCell, /label="大限"/);
+  assert.match(palaceCell, /label="流年"/);
+  assert.match(styles, /\.fp-palace-info-rows\s*\{/);
+});
+
+test('chart shows dashed trine lines only after a palace is selected and labels self-transform arrows', () => {
+  const ziweiChart = source('src/components/ZiweiChart/index.tsx');
+  assert.match(ziweiChart, /trinePoints\.length > 0/);
+  assert.match(ziweiChart, /getTrineFourPoints\(selected\.earthlyBranch\)/);
+  assert.match(styles, /\.fp-trine-overlay polygon/);
+  assert.match(palaceCell, /kind === 'self' \? '↗' : '↙'/);
+  assert.match(chartDecorations, /SIHUA_TABLE\[palace\.heavenlyStem\]/);
+  assert.match(chartDecorations, /OPPOSITES\[palace\.earthlyBranch\]/);
+  assert.match(chartDecorations, /kind: 'considered-self'/);
 });

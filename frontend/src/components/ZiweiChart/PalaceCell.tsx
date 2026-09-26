@@ -1,131 +1,127 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import React from 'react';
+import React from 'react';
+import { getDynamicPalaceName } from '@/lib/fortunePeriods';
+import { getSelfTransformationMarkers } from './chartDecorations';
 
 const MUTAGEN_LABELS = ['禄', '权', '科', '忌'];
-import { getDynamicPalaceName } from '@/lib/fortunePeriods';
 
 interface PalaceCellProps {
   palace: any;
   horoscope?: any;
+  palaces?: any[];
   earthlyBranchOfBodyPalace?: string;
   birthYearStem?: string;
   isSelected?: boolean;
 }
 
 function getMutagenTag(starName: string, mutagen: string[] | undefined): string | null {
-  if (!Array.isArray(mutagen) || mutagen.length === 0) return null;
+  if (!Array.isArray(mutagen)) return null;
   const index = mutagen.findIndex((name) => name === starName);
-  if (index < 0 || index > 3) return null;
-  return MUTAGEN_LABELS[index];
+  return index >= 0 && index < 4 ? MUTAGEN_LABELS[index] : null;
 }
 
-function renderStar(star: any, decadalMutagen: string[] | undefined, yearlyMutagen: string[] | undefined, className: string) {
-  const birthMutagen = star?.mutagen;
-  const decadalTag = getMutagenTag(star?.name, decadalMutagen);
-  const yearlyTag = getMutagenTag(star?.name, yearlyMutagen);
-
+function MutagenRow({ label, stars, color }: { label: string; stars: any[]; color: string }) {
+  const entries = stars.flatMap((star) => star.tag ? [{ name: star.name, tag: star.tag }] : []);
   return (
-    <div key={star?.name} className="flex items-center flex-wrap gap-0.5">
-      <span className={className}>{star?.name}</span>
-      {star?.brightness && <span className="text-[7px] sm:text-xs text-gray-500">{star.brightness}</span>}
-
-      {birthMutagen && (
-        <span className="text-[7px] sm:text-xs font-bold bg-yellow-200 dark:bg-yellow-800 text-red-600 dark:text-red-300 px-0.5 rounded">
-          {birthMutagen}
-        </span>
-      )}
-      {decadalTag && (
-        <span className="text-[7px] sm:text-xs font-bold bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-0.5 rounded">
-          限{decadalTag}
-        </span>
-      )}
-      {yearlyTag && (
-        <span className="text-[7px] sm:text-xs font-bold bg-fuchsia-100 dark:bg-fuchsia-900 text-fuchsia-700 dark:text-fuchsia-300 px-0.5 rounded">
-          流{yearlyTag}
-        </span>
-      )}
+    <div className="fp-palace-info-row" aria-label={label}>
+      <span className="fp-palace-row-label">{label}</span>
+      <span className="fp-palace-row-values">
+        {entries.length ? entries.map((entry, index) => (
+          <span key={`${entry.name}-${index}`} className={color} title={`${entry.name}${entry.tag}`}>
+            {entry.tag}
+          </span>
+        )) : <span className="fp-palace-empty-mark">·</span>}
+      </span>
     </div>
   );
 }
 
-export default function PalaceCell({ palace, horoscope, earthlyBranchOfBodyPalace, birthYearStem, isSelected = false }: PalaceCellProps) {
+export default function PalaceCell({
+  palace,
+  horoscope,
+  palaces = [],
+  earthlyBranchOfBodyPalace,
+  birthYearStem,
+  isSelected = false,
+}: PalaceCellProps) {
   if (!palace) return null;
 
   const isCurrentDecadal = horoscope?.decadal?.earthlyBranch === palace.earthlyBranch;
   const isCurrentYearly = horoscope?.yearly?.earthlyBranch === palace.earthlyBranch;
   const isBodyPalace = palace.earthlyBranch === earthlyBranchOfBodyPalace;
   const isOriginPalace = palace.heavenlyStem === birthYearStem;
-
   const decadalPalace = getDynamicPalaceName(palace.index, horoscope?.decadal?.palaceNames);
   const yearlyPalace = getDynamicPalaceName(palace.index, horoscope?.yearly?.palaceNames);
-
+  const allStars = [...(palace.majorStars || []), ...(palace.minorStars || [])];
+  const selfMarkers = getSelfTransformationMarkers(palace, palaces);
   const decadalMutagen = horoscope?.decadal?.mutagen;
   const yearlyMutagen = horoscope?.yearly?.mutagen;
+  const birthEntries = allStars.flatMap((star) => {
+    const marker = selfMarkers.find((item) => item.starName === star.name);
+    const tag = star?.mutagen || marker?.mutagen;
+    return tag ? [{ name: star.name, tag, marker }] : [];
+  });
+  const decadalEntries = allStars.map((star) => ({ name: star.name, tag: getMutagenTag(star.name, decadalMutagen) }));
+  const yearlyEntries = allStars.map((star) => ({ name: star.name, tag: getMutagenTag(star.name, yearlyMutagen) }));
 
   return (
-    <div
-      className={`fp-palace-cell w-full h-full p-0.5 sm:p-1.5 flex flex-col justify-between ${
-        isCurrentYearly ? 'is-current-yearly' : ''
-      } ${isCurrentDecadal ? 'is-current-decadal' : ''} ${isSelected ? 'is-selected' : ''}`}
-    >
-      <div className="flex flex-col gap-0.5">
-        <div className="flex flex-wrap gap-0.5 content-start">
-          {(palace.majorStars || []).map((star: any) =>
-            renderStar(star, decadalMutagen, yearlyMutagen, 'text-[#9a3c32] font-bold text-[9px] sm:text-base leading-tight'),
-          )}
-        </div>
-        <div className="flex flex-wrap gap-0.5 content-start">
-          {(palace.minorStars || []).map((star: any) =>
-            renderStar(star, decadalMutagen, yearlyMutagen, 'text-[#56645a] text-[8px] sm:text-sm leading-tight'),
-          )}
-        </div>
+    <div className={`fp-palace-cell w-full h-full p-1 sm:p-2 flex flex-col ${
+      isCurrentYearly ? 'is-current-yearly' : ''
+    } ${isCurrentDecadal ? 'is-current-decadal' : ''} ${isSelected ? 'is-selected' : ''}`}>
+      <div className="fp-palace-stars" aria-label="主星与辅星">
+        {allStars.length ? allStars.map((star, index) => (
+          <span
+            key={`${star.name}-${index}`}
+            className={`fp-palace-star ${index < (palace.majorStars || []).length ? 'major' : 'minor'}`}
+            title={`${star.name}${star.brightness ? ` · ${star.brightness}` : ''}`}
+          >{star.name}</span>
+        )) : <span className="fp-palace-no-stars">空宫</span>}
       </div>
 
-      <div className="flex flex-wrap gap-0.5 mt-0.5 opacity-70 text-[7px] sm:text-xs">
-        {palace.adjectiveStars?.map((star: any) => (
-          <div key={star.name} className="flex items-center flex-wrap gap-0.5">
-            <span className="text-gray-600 dark:text-gray-400">{star.name}</span>
-            {star.brightness && <span className="text-[7px] sm:text-xs text-gray-500">{star.brightness}</span>}
-          </div>
-        ))}
-        {palace.changsheng12 && <span className="text-purple-600 dark:text-purple-400">{palace.changsheng12}</span>}
-        {palace.boshi12 && <span className="text-teal-600 dark:text-teal-400">{palace.boshi12}</span>}
+      <div className="fp-palace-info-rows">
+        <div className="fp-palace-info-row" aria-label="亮度">
+          <span className="fp-palace-row-label">亮度</span>
+          <span className="fp-palace-row-values">
+            {allStars.length ? allStars.map((star, index) => (
+              <span key={`${star.name}-brightness-${index}`} title={star.name}>{star.brightness || '—'}</span>
+            )) : <span className="fp-palace-empty-mark">—</span>}
+          </span>
+        </div>
+        <div className="fp-palace-info-row" aria-label="本命四化">
+          <span className="fp-palace-row-label">本命</span>
+          <span className="fp-palace-row-values natal">
+            {birthEntries.length ? birthEntries.map((entry, index) => (
+              <span key={`${entry.name}-birth-${index}`} className="fp-mutagen-natal" title={`${entry.name}本命化${entry.tag}`}>
+                {entry.marker && <span className={`fp-self-arrow ${entry.marker.kind}`} aria-label={entry.marker.kind === 'self' ? '自化' : '视同自化'}>
+                  {entry.marker.kind === 'self' ? '↗' : '↙'}
+                </span>}{entry.tag}
+              </span>
+            )) : <span className="fp-palace-empty-mark">·</span>}
+          </span>
+        </div>
+        <MutagenRow label="大限" stars={decadalEntries} color="fp-mutagen-decadal" />
+        <MutagenRow label="流年" stars={yearlyEntries} color="fp-mutagen-yearly" />
+      </div>
+      <div className="fp-palace-adjectives" title={(palace.adjectiveStars || []).map((star: any) => star.name).join(' ')}>
+        {(palace.adjectiveStars || []).slice(0, 4).map((star: any) => star.name).join(' ')}
+        {palace.changsheng12 ? ` · ${palace.changsheng12}` : ''}
+        {palace.boshi12 ? ` · ${palace.boshi12}` : ''}
       </div>
 
-      <div className="border-t border-dashed border-gray-300 pt-0.5 mt-auto flex justify-between items-end">
-        <div className="flex flex-col">
-          <span className="text-[7px] sm:text-[10px] text-gray-500">
-            {palace.decadal?.range?.[0]}~{palace.decadal?.range?.[1]}
+      <div className="fp-palace-meta">
+        <div className="fp-palace-meta-left">
+          <span className="fp-palace-age">{palace.decadal?.range?.[0]}–{palace.decadal?.range?.[1]} 岁</span>
+          <span className="fp-palace-name-line">
+            <strong>{palace.name}</strong>
+            {isBodyPalace && <span className="fp-body-tag">身</span>}
           </span>
-          <div className="flex items-baseline gap-0.5 flex-wrap">
-            <span className="text-[10px] sm:text-sm font-bold text-red-700 dark:text-red-400">{palace.name}</span>
-            {decadalPalace && (
-              <span className="hidden sm:inline text-[8px] sm:text-xs text-green-600 dark:text-green-400">
-                大{decadalPalace.substring(0, 2)}
-              </span>
-            )}
-            {yearlyPalace && (
-              <span className="hidden sm:inline text-[8px] sm:text-xs text-blue-500 dark:text-blue-400">
-                年{yearlyPalace.substring(0, 2)}
-              </span>
-            )}
-            {isBodyPalace && (
-              <span className="text-[7px] sm:text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 px-0.5 rounded">
-                身
-              </span>
-            )}
-          </div>
+          {(decadalPalace || yearlyPalace) && <span className="fp-palace-dynamic-names">
+            {decadalPalace && `大${decadalPalace.substring(0, 2)}`}
+            {yearlyPalace && ` 年${yearlyPalace.substring(0, 2)}`}
+          </span>}
         </div>
-
-        <div className="flex flex-col items-end">
-          {isOriginPalace && (
-            <span className="text-[7px] sm:text-xs bg-red-600 text-white px-0.5 rounded mb-0.5">
-              因
-            </span>
-          )}
-          <span className="text-xs sm:text-lg font-bold text-[#5b5c52]">
-            {palace.heavenlyStem}
-            {palace.earthlyBranch}
-          </span>
+        <div className="fp-palace-meta-right">
+          {isOriginPalace && <span className="fp-origin-tag">因</span>}
+          <strong>{palace.heavenlyStem}{palace.earthlyBranch}</strong>
         </div>
       </div>
     </div>
