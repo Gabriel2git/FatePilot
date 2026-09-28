@@ -200,14 +200,14 @@ body {
 .fp-ziwei-grid { aspect-ratio: 1 / 1; grid-template-rows: repeat(4, minmax(0, 1fr)); }
 .fp-palace-button { min-height: 0; overflow: hidden; background: var(--fp-card); }
 .fp-palace-cell { overflow: hidden; border-radius: 1px; }
-.fp-palace-stars { display: flex; align-items: flex-start; gap: 4px; min-height: 48px; max-height: 58px; overflow: hidden; }
+.fp-palace-info-rows { display: flex; flex-direction: column; gap: 2px; margin-top: 1px; }
+.fp-palace-info-row { display: grid; grid-template-columns: 22px repeat(var(--fp-star-count), minmax(0, 1fr)); align-items: center; min-height: 14px; white-space: nowrap; overflow: hidden; color: #68685f; font-size: 8px; line-height: 1.1; }
+.fp-palace-info-row > :not(.fp-palace-row-label) { display: flex; align-items: center; justify-content: center; min-width: 0; overflow: hidden; text-align: center; }
+.fp-palace-info-row[aria-label="星曜"] { min-height: 48px; align-items: start; }
+.fp-palace-row-label { align-self: start; color: #88877f; font-size: 7px; line-height: 1.25; }
 .fp-palace-star { display: inline-block; writing-mode: vertical-rl; text-orientation: upright; font: 700 12px/1.05 'Songti SC', 'Noto Serif CJK SC', serif; letter-spacing: .03em; }
 .fp-palace-star.major { color: #9a3c32; }.fp-palace-star.minor { color: #56645a; font-size: 10px; }
 .fp-palace-no-stars { color: var(--fp-muted); font-size: 9px; }
-.fp-palace-info-rows { display: grid; gap: 2px; margin-top: 3px; }
-.fp-palace-info-row { display: flex; align-items: center; min-height: 13px; gap: 3px; white-space: nowrap; overflow: hidden; color: #68685f; font-size: 8px; line-height: 1.1; }
-.fp-palace-row-label { flex: 0 0 23px; color: #88877f; font-size: 7px; }
-.fp-palace-row-values { display: flex; align-items: center; gap: 3px; min-width: 0; overflow: hidden; }
 .fp-palace-empty-mark { color: #c0b9ab; }
 .fp-mutagen-natal { color: #a44135; font-weight: 700; }.fp-mutagen-decadal { color: #2c6ca7; font-weight: 700; }.fp-mutagen-yearly { color: #a143a0; font-weight: 700; }
 .fp-self-arrow { margin-right: 1px; font-size: 12px; line-height: .8; }.fp-self-arrow.self { color: #4b9962; }.fp-self-arrow.considered-self { color: #8a59a5; }
@@ -220,7 +220,7 @@ body {
 .fp-origin-tag { background: #a44135; color: white; }
 .fp-palace-dynamic-names { overflow: hidden; color: #458363; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
 .fp-palace-meta-right { display: flex; flex-direction: column; align-items: flex-end; flex: none; color: #5b5c52; font-size: 12px; }
-.fp-trine-overlay polygon,.fp-trine-overlay line { fill: none; stroke: #746f67; stroke-width: .014; stroke-dasharray: .045 .035; vector-effect: non-scaling-stroke; }
+.fp-trine-overlay line { fill: none; stroke: #65625d; stroke-width: 1.5px; stroke-dasharray: 6 5; stroke-linecap: round; vector-effect: non-scaling-stroke; opacity: .92; }
 .fp-chart-center { background: #f2ede1; }
 .fp-chart-center h2,.fp-chart-center h3 { color: var(--fp-ink); }
 .fp-chart-legend { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; padding-top: 11px; color: var(--fp-muted); font-size: 9px; }
@@ -234,12 +234,11 @@ body {
 .fp-palace-cell.is-selected { position: relative; z-index: 1; outline: 2px dashed var(--fp-ink); outline-offset: -5px; }
 @media (max-width: 620px) {
   .fp-palace-cell { padding: 3px !important; }
-  .fp-palace-stars { min-height: 39px; max-height: 45px; gap: 2px; }
+  .fp-palace-info-rows { gap: 1px; }
+  .fp-palace-info-row { grid-template-columns: 18px repeat(var(--fp-star-count), minmax(0, 1fr)); min-height: 10px; font-size: 6px; }
+  .fp-palace-info-row[aria-label="星曜"] { min-height: 39px; }
+  .fp-palace-row-label { font-size: 6px; }
   .fp-palace-star { font-size: 9px; }.fp-palace-star.minor { font-size: 8px; }
-  .fp-palace-info-rows { gap: 1px; margin-top: 2px; }
-  .fp-palace-info-row { min-height: 10px; font-size: 6px; }
-  .fp-palace-row-label { flex-basis: 18px; font-size: 6px; }
-  .fp-palace-row-values { gap: 2px; }
   .fp-self-arrow { font-size: 9px; }
   .fp-palace-age,.fp-palace-dynamic-names { font-size: 6px; }
   .fp-palace-name-line { font-size: 8px; }

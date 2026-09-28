@@ -51,8 +51,8 @@ test('chart labels follow iztro palace-name arrays and separate selection from a
 
 test('chart separates star brightness and natal, decade, and yearly transformation rows', () => {
   assert.match(styles, /\.fp-palace-star\s*\{[^}]*writing-mode:\s*vertical-rl/s);
-  assert.match(palaceCell, /aria-label="亮度"/);
-  assert.match(palaceCell, /aria-label="本命四化"/);
+  assert.match(palaceCell, /label="亮度"\s+stars=\{allStars\}/);
+  assert.match(palaceCell, /label="本命"\s+stars=\{allStars\}/);
   assert.match(palaceCell, /label="大限"/);
   assert.match(palaceCell, /label="流年"/);
   assert.match(styles, /\.fp-palace-info-rows\s*\{/);
@@ -60,9 +60,9 @@ test('chart separates star brightness and natal, decade, and yearly transformati
 
 test('chart shows dashed trine lines only after a palace is selected and labels self-transform arrows', () => {
   const ziweiChart = source('src/components/ZiweiChart/index.tsx');
-  assert.match(ziweiChart, /trinePoints\.length > 0/);
-  assert.match(ziweiChart, /getTrineFourPoints\(selected\.earthlyBranch\)/);
-  assert.match(styles, /\.fp-trine-overlay polygon/);
+  assert.match(ziweiChart, /trineConnections\.length > 0/);
+  assert.match(ziweiChart, /getTrineConnections\(selected\.earthlyBranch\)/);
+  assert.match(styles, /\.fp-trine-overlay line/);
   assert.match(palaceCell, /kind === 'self' \? '↗' : '↙'/);
   assert.match(chartDecorations, /SIHUA_TABLE\[palace\.heavenlyStem\]/);
   assert.match(chartDecorations, /OPPOSITES\[palace\.earthlyBranch\]/);

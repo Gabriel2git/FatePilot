@@ -19,18 +19,23 @@ function getMutagenTag(starName: string, mutagen: string[] | undefined): string 
   return index >= 0 && index < 4 ? MUTAGEN_LABELS[index] : null;
 }
 
-function MutagenRow({ label, stars, color }: { label: string; stars: any[]; color: string }) {
-  const entries = stars.flatMap((star) => star.tag ? [{ name: star.name, tag: star.tag }] : []);
+function PalaceDataRow({
+  label,
+  stars,
+  rowClass = '',
+  renderCell,
+  emptyText = '\u00a0',
+}: {
+  label: string;
+  stars: any[];
+  rowClass?: string;
+  renderCell: (star: any, index: number) => React.ReactNode;
+  emptyText?: string;
+}) {
   return (
-    <div className="fp-palace-info-row" aria-label={label}>
+    <div className={`fp-palace-info-row ${rowClass}`} aria-label={label}>
       <span className="fp-palace-row-label">{label}</span>
-      <span className="fp-palace-row-values">
-        {entries.length ? entries.map((entry, index) => (
-          <span key={`${entry.name}-${index}`} className={color} title={`${entry.name}${entry.tag}`}>
-            {entry.tag}
-          </span>
-        )) : <span className="fp-palace-empty-mark">·</span>}
-      </span>
+      {stars.length ? stars.map(renderCell) : <span className="fp-palace-empty-mark">{emptyText}</span>}
     </div>
   );
 }
@@ -55,51 +60,71 @@ export default function PalaceCell({
   const selfMarkers = getSelfTransformationMarkers(palace, palaces);
   const decadalMutagen = horoscope?.decadal?.mutagen;
   const yearlyMutagen = horoscope?.yearly?.mutagen;
-  const birthEntries = allStars.flatMap((star) => {
-    const marker = selfMarkers.find((item) => item.starName === star.name);
-    const tag = star?.mutagen || marker?.mutagen;
-    return tag ? [{ name: star.name, tag, marker }] : [];
-  });
-  const decadalEntries = allStars.map((star) => ({ name: star.name, tag: getMutagenTag(star.name, decadalMutagen) }));
-  const yearlyEntries = allStars.map((star) => ({ name: star.name, tag: getMutagenTag(star.name, yearlyMutagen) }));
+  const starColumnCount = Math.max(allStars.length, 1);
 
   return (
     <div className={`fp-palace-cell w-full h-full p-1 sm:p-2 flex flex-col ${
       isCurrentYearly ? 'is-current-yearly' : ''
     } ${isCurrentDecadal ? 'is-current-decadal' : ''} ${isSelected ? 'is-selected' : ''}`}>
-      <div className="fp-palace-stars" aria-label="主星与辅星">
-        {allStars.length ? allStars.map((star, index) => (
-          <span
-            key={`${star.name}-${index}`}
+      <div className="fp-palace-info-rows" style={{ '--fp-star-count': starColumnCount } as React.CSSProperties}>
+        <PalaceDataRow
+          label="星曜"
+          stars={allStars}
+          emptyText="空宫"
+          renderCell={(star, index) => <span
+            key={`${star.name}-name-${index}`}
             className={`fp-palace-star ${index < (palace.majorStars || []).length ? 'major' : 'minor'}`}
-            title={`${star.name}${star.brightness ? ` · ${star.brightness}` : ''}`}
-          >{star.name}</span>
-        )) : <span className="fp-palace-no-stars">空宫</span>}
-      </div>
-
-      <div className="fp-palace-info-rows">
-        <div className="fp-palace-info-row" aria-label="亮度">
-          <span className="fp-palace-row-label">亮度</span>
-          <span className="fp-palace-row-values">
-            {allStars.length ? allStars.map((star, index) => (
-              <span key={`${star.name}-brightness-${index}`} title={star.name}>{star.brightness || '—'}</span>
-            )) : <span className="fp-palace-empty-mark">—</span>}
-          </span>
-        </div>
-        <div className="fp-palace-info-row" aria-label="本命四化">
-          <span className="fp-palace-row-label">本命</span>
-          <span className="fp-palace-row-values natal">
-            {birthEntries.length ? birthEntries.map((entry, index) => (
-              <span key={`${entry.name}-birth-${index}`} className="fp-mutagen-natal" title={`${entry.name}本命化${entry.tag}`}>
-                {entry.marker && <span className={`fp-self-arrow ${entry.marker.kind}`} aria-label={entry.marker.kind === 'self' ? '自化' : '视同自化'}>
-                  {entry.marker.kind === 'self' ? '↗' : '↙'}
-                </span>}{entry.tag}
-              </span>
-            )) : <span className="fp-palace-empty-mark">·</span>}
-          </span>
-        </div>
-        <MutagenRow label="大限" stars={decadalEntries} color="fp-mutagen-decadal" />
-        <MutagenRow label="流年" stars={yearlyEntries} color="fp-mutagen-yearly" />
+            title={star.name}
+          >{star.name}</span>}
+        />
+        <PalaceDataRow
+          label="亮度"
+          stars={allStars}
+          rowClass="fp-palace-brightness-row"
+          renderCell={(star, index) => <span key={`${star.name}-brightness-${index}`} title={`${star.name}亮度${star.brightness || '未知'}`}>
+            {star.brightness || '—'}
+          </span>}
+        />
+        <PalaceDataRow
+          label="本命"
+          stars={allStars}
+          rowClass="fp-mutagen-natal-row"
+          renderCell={(star, index) => {
+            const marker = selfMarkers.find((item) => item.starName === star.name);
+            const tag = star?.mutagen || marker?.mutagen;
+            return <span
+              key={`${star.name}-birth-${index}`}
+              className="fp-mutagen-natal"
+              title={tag ? `${star.name}本命化${tag}${marker ? (marker.kind === 'self' ? '，自化' : '，视同自化') : ''}` : star.name}
+            >
+              {marker && <span className={`fp-self-arrow ${marker.kind}`} aria-label={marker.kind === 'self' ? '自化' : '视同自化'}>
+                {marker.kind === 'self' ? '↗' : '↙'}
+              </span>}{tag || '\u00a0'}
+            </span>;
+          }}
+        />
+        <PalaceDataRow
+          label="大限"
+          stars={allStars}
+          rowClass="fp-mutagen-decadal-row"
+          renderCell={(star, index) => {
+            const tag = getMutagenTag(star.name, decadalMutagen);
+            return <span key={`${star.name}-decadal-${index}`} title={tag ? `${star.name}大限化${tag}` : star.name}>
+              {tag || '\u00a0'}
+            </span>;
+          }}
+        />
+        <PalaceDataRow
+          label="流年"
+          stars={allStars}
+          rowClass="fp-mutagen-yearly-row"
+          renderCell={(star, index) => {
+            const tag = getMutagenTag(star.name, yearlyMutagen);
+            return <span key={`${star.name}-yearly-${index}`} title={tag ? `${star.name}流年化${tag}` : star.name}>
+              {tag || '\u00a0'}
+            </span>;
+          }}
+        />
       </div>
       <div className="fp-palace-adjectives" title={(palace.adjectiveStars || []).map((star: any) => star.name).join(' ')}>
         {(palace.adjectiveStars || []).slice(0, 4).map((star: any) => star.name).join(' ')}

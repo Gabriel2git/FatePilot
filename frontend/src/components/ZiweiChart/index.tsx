@@ -2,7 +2,7 @@
 import PalaceCell from './PalaceCell';
 import CenterInfo from './CenterInfo';
 import { EARTHLY_BRANCHES, GRID_MAPPING } from './constants';
-import { getTrineFourPoints } from './chartDecorations';
+import { getTrineConnections } from './chartDecorations';
 
 interface ZiweiChartProps {
   ziweiData: {
@@ -23,8 +23,7 @@ export default function ZiweiChart({ ziweiData, selectedPalace, onSelectPalace }
   const earthlyBranchOfBodyPalace = astrolabe.earthlyBranchOfBodyPalace;
   const birthYearStem = astrolabe.chineseDate ? astrolabe.chineseDate.charAt(0) : undefined;
   const selected = palaces.find((palace: any) => palace.name === selectedPalace);
-  const trinePoints = selected ? getTrineFourPoints(selected.earthlyBranch) : [];
-  const trinePolygon = trinePoints.map(([x, y]) => `${x},${y}`).join(' ');
+  const trineConnections = selected ? getTrineConnections(selected.earthlyBranch) : [];
 
   return (
     <div className="fp-ziwei-grid mx-auto relative grid w-full max-w-[720px] grid-cols-4 grid-rows-4 gap-px overflow-hidden rounded-xl border border-[#ddd2bf] bg-[#ddd2bf]">
@@ -56,16 +55,25 @@ export default function ZiweiChart({ ziweiData, selectedPalace, onSelectPalace }
       <div className="col-start-2 col-span-2 row-start-2 row-span-2 fp-chart-center relative z-10">
         <CenterInfo astrolabe={astrolabe} horoscope={horoscope} targetYear={ziweiData.targetYear} />
       </div>
-      {trinePoints.length > 0 && (
+      {trineConnections.length > 0 && (
         <svg
           className="fp-trine-overlay absolute inset-0 z-20 h-full w-full pointer-events-none"
           viewBox="0 0 4 4"
           preserveAspectRatio="none"
           aria-label={`${selected.name}宫三方四正连线`}
+          role="img"
         >
-          <polygon points={trinePolygon} />
-          {trinePoints.slice(1).map(([x, y], index) => (
-            <line key={index} x1={trinePoints[0][0]} y1={trinePoints[0][1]} x2={x} y2={y} />
+          <title>{selected.name}宫连接三方两宫及对宫</title>
+          {trineConnections.map((connection) => (
+            <line
+              key={connection.toBranch}
+              data-from-branch={connection.fromBranch}
+              data-to-branch={connection.toBranch}
+              x1={connection.from[0]}
+              y1={connection.from[1]}
+              x2={connection.to[0]}
+              y2={connection.to[1]}
+            />
           ))}
         </svg>
       )}

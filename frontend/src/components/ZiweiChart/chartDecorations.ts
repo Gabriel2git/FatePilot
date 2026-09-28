@@ -14,11 +14,23 @@ const OPPOSITES: Record<string, string> = {
   午: '子', 未: '丑', 申: '寅', 酉: '卯', 戌: '辰', 亥: '巳',
 };
 
-export function getTrineFourPoints(branch: string) {
+export interface TrineConnection {
+  fromBranch: string;
+  toBranch: string;
+  from: [number, number];
+  to: [number, number];
+}
+
+export function getTrineConnections(branch: string): TrineConnection[] {
   const trine = TRINES.find((group) => group.includes(branch));
-  if (!trine) return [];
-  const relatedBranches = [...trine, OPPOSITES[branch]];
-  return relatedBranches.map((item) => GRID_COORDINATES[item]).filter(Boolean);
+  const origin = GRID_COORDINATES[branch];
+  if (!trine || !origin || !OPPOSITES[branch]) return [];
+
+  const destinations = [...trine.filter((item) => item !== branch), OPPOSITES[branch]];
+  return destinations.flatMap((toBranch) => {
+    const to = GRID_COORDINATES[toBranch];
+    return to ? [{ fromBranch: branch, toBranch, from: origin, to }] : [];
+  });
 }
 
 export interface SelfTransformationMarker {
