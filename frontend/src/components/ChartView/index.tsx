@@ -254,7 +254,6 @@ export default function ChartView({
                   horoscope: ziweiData?.horoscope,
                   targetYear: ziweiData?.targetYear,
                 }}
-                selectedPalace={selectedPalace?.name || null}
                 onSelectPalace={setSelectedPalace}
               />
             </div>

@@ -45,7 +45,7 @@ test('chart labels follow iztro palace-name arrays and separate selection from a
   assert.match(palaceCell, /horoscope\?\.yearly\?\.palaceNames/);
   assert.match(palaceCell, /horoscope\?\.decadal\?\.palaceNames/);
   assert.match(palaceCell, /isCurrentYearly \? 'is-current-yearly'/);
-  assert.match(chart, /selectedPalace=\{selectedPalace\?\.name \|\| null\}/);
+  assert.match(chart, /onSelectPalace=\{setSelectedPalace\}/);
   assert.match(centerInfo, /推演年份：/);
 });
 
@@ -61,7 +61,8 @@ test('chart separates star brightness and natal, decade, and yearly transformati
 test('chart shows dashed trine lines only after a palace is selected and labels self-transform arrows', () => {
   const ziweiChart = source('src/components/ZiweiChart/index.tsx');
   assert.match(ziweiChart, /trineConnections\.length > 0/);
-  assert.match(ziweiChart, /getTrineConnections\(selected\.earthlyBranch\)/);
+  assert.match(ziweiChart, /getTrineConnections\(trinePalace\.earthlyBranch\)/);
+  assert.match(ziweiChart, /setTrineBranch\(\(current\) => current === branch \? null : branch\)/);
   assert.match(styles, /\.fp-trine-overlay line/);
   assert.match(palaceCell, /kind === 'self' \? '↗' : '↙'/);
   assert.match(chartDecorations, /SIHUA_TABLE\[palace\.heavenlyStem\]/);

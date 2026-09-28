@@ -47,11 +47,22 @@ test('星曜、亮度和本命大限流年四化都由同一组星曜列生成',
 
 test('选中宫位才渲染三条 SVG 连线，未选中不渲染', () => {
   const component = fs.readFileSync(path.join(__dirname, '../src/components/ZiweiChart/index.tsx'), 'utf8');
+  const cell = fs.readFileSync(path.join(__dirname, '../src/components/ZiweiChart/PalaceCell.tsx'), 'utf8');
   const styles = fs.readFileSync(path.join(__dirname, '../src/app/globals.css'), 'utf8');
-  assert.match(component, /selected \? getTrineConnections\(selected\.earthlyBranch\) : \[\]/);
+  assert.match(component, /trinePalace \? getTrineConnections\(trinePalace\.earthlyBranch\) : \[\]/);
+  assert.match(component, /current === branch \? null : branch/);
+  assert.match(component, /aria-pressed=\{trineBranch === branch\}/);
+  assert.match(component, /isSelected=\{trineBranch === branch\}/);
+  assert.match(cell, /isSelected \? 'is-selected' : ''/);
   assert.match(component, /trineConnections\.map\(/);
   assert.match(component, /x1=\{connection\.from\[0\]\}/);
   assert.match(component, /y1=\{connection\.from\[1\]\}/);
   assert.match(styles, /\.fp-trine-overlay line[^\{]*\{[^}]*stroke-width:\s*1\.5px/);
   assert.match(styles, /\.fp-trine-overlay line[^\{]*\{[^}]*stroke-dasharray:\s*6 5/);
+});
+
+test('星曜区高度跟随星名内容，不再保留固定空白高度', () => {
+  const styles = fs.readFileSync(path.join(__dirname, '../src/app/globals.css'), 'utf8');
+  assert.match(styles, /\.fp-palace-info-row\[aria-label="星曜"\]\s*\{\s*min-height:\s*0;/);
+  assert.doesNotMatch(styles, /\.fp-palace-info-row\[aria-label="星曜"\]\s*\{[^}]*min-height:\s*(?:39|48)px/);
 });
