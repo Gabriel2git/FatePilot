@@ -7,6 +7,7 @@ const source = (file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8
 const page = source('src/app/page.tsx');
 const styles = source('src/app/globals.css');
 const chat = source('src/components/AIChat/index.tsx');
+const aiPage = source('src/components/AIFortuneTeller/index.tsx');
 const chart = source('src/components/ChartView/index.tsx');
 const palaceCell = source('src/components/ZiweiChart/PalaceCell.tsx');
 const centerInfo = source('src/components/ZiweiChart/CenterInfo.tsx');
@@ -21,6 +22,40 @@ test('tools menu closes on outside pointer and Escape', () => {
 test('chat keeps long answers in an independently scrollable viewport area', () => {
   assert.match(styles, /\.fp-app-chat \.fp-ai-chat-area\s*\{[^}]*min-height:\s*0/s);
   assert.match(chat, /flex-1 min-h-0 overflow-y-auto/);
+  assert.match(styles, /\.fp-chat-composer\s*\{[^}]*flex:\s*none/s);
+  assert.match(styles, /env\(safe-area-inset-bottom\)/);
+});
+
+test('chat page keeps model and persona in collapsed settings beside a compact chart context', () => {
+  const settingsStart = aiPage.indexOf('<details className="fp-ai-settings">');
+  const settingsEnd = aiPage.indexOf('</details>', settingsStart);
+  assert.notEqual(settingsStart, -1);
+  assert.notEqual(settingsEnd, -1);
+  const settings = aiPage.slice(settingsStart, settingsEnd);
+  assert.match(settings, /id="ai-model-select"/);
+  assert.match(settings, /className="fp-persona-control"/);
+  assert.match(settings, /role="group" aria-label="解读风格"/);
+  assert.doesNotMatch(settings.slice(0, settings.indexOf('>')), /\bopen\b/);
+  assert.match(aiPage, /已带入：\{readingContext\}/);
+  assert.doesNotMatch(aiPage, /fp-ai-contextbar/);
+  assert.match(aiPage, /切换解读风格会重新开始当前对话/);
+});
+
+test('chat view uses a compact viewport layout while preserving status and stop controls', () => {
+  assert.match(styles, /\.fp-app-chat \.fp-main\s*\{[^}]*overflow:\s*hidden/s);
+  assert.match(styles, /\.fp-app-chat \.fp-ai-chat-area\s*\{[^}]*flex:\s*1[^}]*min-height:\s*0/s);
+  assert.doesNotMatch(styles, /\.fp-ai-chat-area\s*\{[^}]*min-height:\s*520px/);
+  assert.match(chat, /aria-live="polite"/);
+  assert.match(chat, /onClick=\{stopGeneration\}/);
+});
+
+test('chat waiting feedback stays inline and does not render blank assistant bubbles', () => {
+  assert.match(chat, /className="fp-chat-progress" role="status" aria-live="polite"/);
+  assert.match(chat, /正在整理\{loadingStage === 'context' \? '命盘信息' : '解读内容'\}/);
+  assert.match(chat, /已等待 \{waitingSeconds\} 秒/);
+  assert.match(chat, /message\.content\.trim\(\)\.length > 0/);
+  assert.doesNotMatch(chat, /fp-chat-loading|fp-chat-spinner/);
+  assert.match(styles, /\.fp-chat-progress\s*\{[^}]*margin-left:/s);
 });
 
 test('chat scrollbar uses FatePilot theme colors', () => {

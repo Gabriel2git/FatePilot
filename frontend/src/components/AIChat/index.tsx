@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Message } from '@/lib/ai';
 import type { ContextStatus } from '@/types';
 
@@ -31,8 +31,6 @@ interface AIChatProps {
   stopGeneration: () => void;
 }
 
-const LOADING_TEXTS = ['正在排布宫位星曜', '正在推演大限流年', '正在整合命盘建议', '正在润色可执行结论'];
-
 export default function AIChat({
   messages,
   inputMessage,
@@ -54,12 +52,9 @@ export default function AIChat({
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
   const [waitingSeconds, setWaitingSeconds] = useState(0);
 
-  const loadingText = useMemo(() => {
-    if (loadingStage === 'context') {
-      return '正在准备完整命盘上下文';
-    }
-    return LOADING_TEXTS[waitingSeconds % LOADING_TEXTS.length];
-  }, [loadingStage, waitingSeconds]);
+  const visibleMessages = messages.filter((message) =>
+    message.role !== 'system' && (message.role === 'user' || message.content.trim().length > 0),
+  );
 
   const scrollToBottom = () => {
     if (!messagesContainerRef.current) return;
@@ -104,10 +99,12 @@ export default function AIChat({
   return (
     <div className="fp-chat-panel h-full min-h-0 flex flex-col relative">
       <div className="fp-chat-heading flex justify-between items-center mb-2 sm:mb-4">
-        <h2 className="text-sm sm:text-xl font-bold text-gray-900 dark:text-gray-100">AI 命理师</h2>
+        <h2 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-gray-100">AI 命理师</h2>
         <div className="flex gap-2 items-center">
           <span
-            className={`hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${
+            role="status"
+            aria-live="polite"
+            className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${
               contextStatus === 'ready'
                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
                 : contextStatus === 'loading'
@@ -149,9 +146,7 @@ export default function AIChat({
           </div>
         ) : (
           <div className="fp-chat-thread space-y-4">
-            {messages
-              .filter((message) => message.role !== 'system')
-              .map((message, index) => (
+            {visibleMessages.map((message, index) => (
                 <div key={index} className={`fp-chat-row ${message.role === 'user' ? 'is-user' : 'is-assistant'}`}>
                   {message.role !== 'user' && <span className="fp-chat-avatar" aria-hidden="true">解</span>}
                   <article className={`fp-chat-bubble ${message.role === 'user' ? 'fp-chat-bubble-user' : 'fp-chat-bubble-assistant'}`}>
@@ -162,7 +157,7 @@ export default function AIChat({
                 </div>
               ))}
 
-            {messages.filter((message) => message.role !== 'system').length === 1 && !isLoading && (
+            {visibleMessages.length === 1 && !isLoading && (
               <div className="fp-chat-starters" aria-label="建议问题">
                 {[
                   '先整体看看我的命盘特点',
@@ -175,26 +170,12 @@ export default function AIChat({
             )}
 
             {isLoading && (
-              <div className="fp-chat-row is-assistant">
-                <span className="fp-chat-avatar" aria-hidden="true">解</span>
-                <div className="fp-chat-loading p-3 sm:p-4 min-w-[180px]">
-                  <div className="flex items-center gap-3">
-                    <div className="relative w-6 h-6">
-                      <div className="fp-chat-spinner-track absolute inset-0 rounded-full border-2" />
-                      <div className="fp-chat-spinner absolute inset-0 rounded-full border-2 border-transparent animate-spin" />
-                      <div className="fp-chat-spinner-core absolute inset-1 rounded-full animate-pulse" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="fp-chat-loading-title text-xs sm:text-sm font-semibold">{loadingText}</div>
-                      <div className="fp-chat-loading-time text-[11px] mt-1">已等待 {waitingSeconds}s</div>
-                    </div>
-                  </div>
-                  <div className="flex gap-1 mt-3">
-                    <div className="fp-chat-loading-dot w-1.5 h-1.5 rounded-full animate-bounce" />
-                    <div className="fp-chat-loading-dot w-1.5 h-1.5 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                    <div className="fp-chat-loading-dot w-1.5 h-1.5 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
-                  </div>
-                </div>
+              <div className="fp-chat-progress" role="status" aria-live="polite">
+                <span className="fp-chat-progress-dots" aria-hidden="true">
+                  <i /><i /><i />
+                </span>
+                <span>正在整理{loadingStage === 'context' ? '命盘信息' : '解读内容'}…</span>
+                <span className="fp-chat-progress-time">已等待 {waitingSeconds} 秒</span>
               </div>
             )}
 
