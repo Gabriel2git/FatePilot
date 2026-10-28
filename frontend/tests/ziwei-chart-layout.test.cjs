@@ -44,6 +44,7 @@ test('星曜、亮度和本命大限流年四化都由同一组星曜列生成',
   assert.match(component, /label="流年"\s+stars=\{allStars\}/);
   assert.match(component, /label="流月"\s+stars=\{allStars\}/);
   assert.match(component, /is-current-monthly/);
+  assert.match(fs.readFileSync(path.join(__dirname, '../src/app/globals.css'), 'utf8'), /repeat\(var\(--fp-star-count\), 30px\)/);
   assert.match(component, /marker\.kind === 'self' \? '↗' : '↙'/);
 });
 

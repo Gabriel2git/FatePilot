@@ -81,7 +81,8 @@ test('chart labels follow iztro palace-name arrays and separate selection from a
   assert.match(palaceCell, /horoscope\?\.decadal\?\.palaceNames/);
   assert.match(palaceCell, /isCurrentYearly \? 'is-current-yearly'/);
   assert.match(chart, /onSelectPalace=\{setSelectedPalace\}/);
-  assert.match(centerInfo, /推演年份：/);
+  assert.match(centerInfo, /推演时间：/);
+  assert.match(centerInfo, /targetMonth \? `年\$\{targetMonth\}月`/);
 });
 
 test('chart separates star brightness and natal, decade, and yearly transformation rows', () => {

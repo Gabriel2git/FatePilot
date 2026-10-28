@@ -58,7 +58,7 @@ export default function ZiweiChart({ ziweiData, onSelectPalace }: ZiweiChartProp
       })}
 
       <div className="col-start-2 col-span-2 row-start-2 row-span-2 fp-chart-center relative z-10">
-        <CenterInfo astrolabe={astrolabe} horoscope={horoscope} targetYear={ziweiData.targetYear} />
+        <CenterInfo astrolabe={astrolabe} horoscope={horoscope} targetYear={ziweiData.targetYear} targetMonth={ziweiData.targetMonth} />
       </div>
       {trineConnections.length > 0 && (
         <svg

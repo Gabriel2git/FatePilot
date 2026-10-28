@@ -201,8 +201,8 @@ body {
 .fp-palace-button { min-height: 0; overflow: hidden; background: var(--fp-card); }
 .fp-palace-cell { overflow: hidden; border-radius: 1px; }
 .fp-palace-info-rows { display: flex; flex-direction: column; gap: 1px; margin-top: 1px; }
-.fp-palace-info-row { display: grid; grid-template-columns: 22px repeat(var(--fp-star-count), minmax(0, 1fr)); align-items: center; min-height: 14px; white-space: nowrap; overflow: hidden; color: #68685f; font-size: 8px; line-height: 1.1; }
-.fp-palace-info-row > :not(.fp-palace-row-label) { display: flex; align-items: center; justify-content: center; min-width: 0; overflow: hidden; text-align: center; }
+.fp-palace-info-row { display: grid; grid-template-columns: 22px repeat(var(--fp-star-count), 30px); justify-content: start; column-gap: 2px; align-items: center; min-height: 14px; white-space: nowrap; overflow: hidden; color: #68685f; font-size: 8px; line-height: 1.1; }
+.fp-palace-info-row > :not(.fp-palace-row-label) { display: flex; align-items: center; justify-content: flex-start; min-width: 0; overflow: hidden; text-align: left; }
 .fp-palace-info-row[aria-label="星曜"] { min-height: 0; align-items: start; }
 .fp-palace-row-label { align-self: start; color: #88877f; font-size: 7px; line-height: 1.25; }
 .fp-palace-star { display: inline-block; writing-mode: vertical-rl; text-orientation: upright; font: 700 12px/1.05 'Songti SC', 'Noto Serif CJK SC', serif; letter-spacing: .03em; }
@@ -240,7 +240,7 @@ body {
 @media (max-width: 620px) {
   .fp-palace-cell { padding: 3px !important; }
   .fp-palace-info-rows { gap: 1px; }
-  .fp-palace-info-row { grid-template-columns: 18px repeat(var(--fp-star-count), minmax(0, 1fr)); min-height: 10px; font-size: 6px; }
+  .fp-palace-info-row { grid-template-columns: 18px repeat(var(--fp-star-count), 25px); column-gap: 1px; min-height: 10px; font-size: 6px; }
   .fp-palace-info-row[aria-label="星曜"] { min-height: 0; }
   .fp-palace-row-label { font-size: 6px; }
   .fp-palace-star { font-size: 9px; }.fp-palace-star.minor { font-size: 8px; }

@@ -4,9 +4,10 @@ interface CenterInfoProps {
   astrolabe: any;
   horoscope?: any;
   targetYear?: number;
+  targetMonth?: number | null;
 }
 
-export default function CenterInfo({ astrolabe, horoscope, targetYear }: CenterInfoProps) {
+export default function CenterInfo({ astrolabe, horoscope, targetYear, targetMonth }: CenterInfoProps) {
   return (
     <div className="fp-chart-center w-full h-full p-1 sm:p-4 flex flex-col items-center justify-center border-2 border-double border-[#d8ccb7]">
       <h2
@@ -41,7 +42,7 @@ export default function CenterInfo({ astrolabe, horoscope, targetYear }: CenterI
         <p>五行局：{astrolabe.fiveElementsClass}</p>
 
         {horoscope?.age && (
-          <p className="mt-4 text-[#a44135] font-bold">推演年份：{targetYear || horoscope.solarDate?.slice(0, 4) || '—'} · 虚岁 {horoscope.age.nominalAge}</p>
+          <p className="mt-4 text-[#a44135] font-bold">推演时间：{targetYear || horoscope.solarDate?.slice(0, 4) || '—'}{targetMonth ? `年${targetMonth}月` : '年'} · 虚岁 {horoscope.age.nominalAge}</p>
         )}
       </div>
     </div>
