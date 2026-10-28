@@ -1,4 +1,5 @@
 ﻿import type { Palace, SelectedContext, ZiweiData } from '@/types';
+import { getShichenIndexFromHour } from '@/lib/shichen';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -92,6 +93,7 @@ function formatStars(
     showBirthMutagen?: boolean;
     decadalMutagen?: string[];
     yearlyMutagen?: string[];
+    monthlyMutagen?: string[];
   },
 ): string {
   if (!Array.isArray(stars) || stars.length === 0) return '无';
@@ -101,7 +103,8 @@ function formatStars(
       const birthMutagen = options?.showBirthMutagen && star?.mutagen ? `[${star.mutagen}]` : '';
       const decadalMutagen = getMutagenTagByStarName(star?.name, options?.decadalMutagen, '大限');
       const yearlyMutagen = getMutagenTagByStarName(star?.name, options?.yearlyMutagen, '流年');
-      return `${star?.name || ''}${brightness}${birthMutagen}${decadalMutagen}${yearlyMutagen}`;
+      const monthlyMutagen = getMutagenTagByStarName(star?.name, options?.monthlyMutagen, '流月');
+      return `${star?.name || ''}${brightness}${birthMutagen}${decadalMutagen}${yearlyMutagen}${monthlyMutagen}`;
     })
     .filter(Boolean)
     .join(',') || '无';
@@ -145,17 +148,21 @@ function buildPalaceText(astrolabe: any, horoscope: any, selectedContext?: Selec
     .map((palace, palaceIndex) => {
       const decadalRoleName = resolvePalaceRoleName(palaceIndex, 'decadal', horoscope, palace, selectedContext);
       const yearlyRoleName = resolvePalaceRoleName(palaceIndex, 'yearly', horoscope, palace, selectedContext);
-      const monthlyRoleName = Array.isArray(horoscope?.monthly?.palaceNames) ? horoscope.monthly.palaceNames[palaceIndex] || '无' : '无';
+      const monthlyRoleName = selectedContext?.targetMonth && Array.isArray(horoscope?.monthly?.palaceNames)
+        ? horoscope.monthly.palaceNames[palaceIndex] || '无'
+        : '';
       const decadalMutagen = selectedContext?.decadal?.mutagen || horoscope?.decadal?.mutagen;
       const yearlyMutagen = selectedContext?.yearly?.mutagen || horoscope?.yearly?.mutagen;
+      const monthlyMutagen = selectedContext?.monthly?.mutagen;
+      const flowMonthText = selectedContext?.targetMonth ? `\n│   └流月宫位 : ${monthlyRoleName}` : '';
 
       const start = palace?.decadal?.range?.[0] ?? '-';
       const end = palace?.decadal?.range?.[1] ?? '-';
       const minorAges = Array.isArray(palace?.ages) && palace.ages.length ? palace.ages.join(',') : '无';
 
       return `│ └${palace?.name || '未知宫'}[${palace?.heavenlyStem || ''}${palace?.earthlyBranch || ''}]
-│   ├主星 : ${formatStars(palace?.majorStars, { showBirthMutagen: true, decadalMutagen, yearlyMutagen })}
-│   ├辅星 : ${formatStars(palace?.minorStars, { showBirthMutagen: true, decadalMutagen, yearlyMutagen })}
+│   ├主星 : ${formatStars(palace?.majorStars, { showBirthMutagen: true, decadalMutagen, yearlyMutagen, monthlyMutagen })}
+│   ├辅星 : ${formatStars(palace?.minorStars, { showBirthMutagen: true, decadalMutagen, yearlyMutagen, monthlyMutagen })}
 │   ├小星 : ${formatStars(palace?.adjectiveStars)}
 │   ├神煞
 │   │ ├岁前星 : ${palace?.suiqian12 || '无'}
@@ -165,8 +172,7 @@ function buildPalaceText(astrolabe: any, horoscope: any, selectedContext?: Selec
 │   ├大限 : ${start} ~ ${end}虚岁
 │   ├小限 : ${minorAges}虚岁
 │   ├大限宫位 : ${decadalRoleName}
-│   ├流年宫位 : ${yearlyRoleName}
-│   └流月宫位 : ${monthlyRoleName}`;
+│   └流年宫位 : ${yearlyRoleName}${flowMonthText}`;
     })
     .join('\n\n');
 }
@@ -202,6 +208,7 @@ export function parseZiweiToPrompt(fullData: ZiweiData): [string, string] {
   const originalHour = fullData.originalTime?.hour ?? 0;
   const originalMinute = fullData.originalTime?.minute ?? 0;
   const clockTime = `${pan?.solarDate || ''} ${String(originalHour).padStart(2, '0')}:${String(originalMinute).padStart(2, '0')}`;
+  const currentDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai' }).format(new Date());
 
   const baseInfo = [
     `性别：${pan?.gender || '未知'}`,
@@ -212,6 +219,7 @@ export function parseZiweiToPrompt(fullData: ZiweiData): [string, string] {
     `身主：${pan?.body || '未知'}；命主：${pan?.soul || '未知'}；身宫：${pan?.earthlyBranchOfBodyPalace || '未知'}`,
     '运限年份锚点：每年06-30（年中口径）',
     '系统基准年份：2026年',
+    `当前日期（Asia/Shanghai）：${currentDate}`,
     `当前推演年份：${targetYear}年`,
     `当前虚岁（iztro）：${yun?.age?.nominalAge ?? '未知'}`,
   ].join('\n');
@@ -284,7 +292,10 @@ ${dataContext}${ragSection}
 2. 明确区分本命结构与当前大限/流年引动。
 3. 四化必须引用本次数据中的真实字段（禄权科忌）。
 4. 如有知识库检索结果，可结合进行解读。
-5. 给出可执行建议，避免空泛结论。`;
+5. 给出可执行建议，避免空泛结论。
+
+# Dynamic Fortune Lookup
+当前提示词中的运限数据只对应用户本次选中的时间范围。若用户询问其他年份或月份，必须先调用 get_ziwei_horoscope 查询计算引擎；不要自行推算该时段的宫位、四化或干支，也不要把已选月份的结果套用到其他月份。月份参数使用公历年月，工具以该月15日计算并返回对应农历日期；回答时说明计算日期和农历对应关系。用户问“今年”“明年”“下个月”等相对时间时，先按当前日期确定具体年月再查询。`;
 }
 
 async function fetchRAGContext(query: string): Promise<string> {
@@ -315,6 +326,7 @@ export async function getLLMResponse(
   messages: Message[],
   model: string = AI_MODELS[0],
   signal?: AbortSignal,
+  fortuneContext?: { birthday: string; hourIndex: number; gender: 'male' | 'female' },
 ): Promise<ReadableStream<Uint8Array> | null> {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -323,6 +335,7 @@ export async function getLLMResponse(
     messages,
     stream: true,
   };
+  if (fortuneContext) requestBody.fortuneContext = fortuneContext;
 
   const response = await fetch(`${API_BASE_URL}/api/llm/chat`, {
     method: 'POST',
@@ -339,6 +352,15 @@ export async function getLLMResponse(
   }
 
   return response.body;
+}
+
+export function buildFortuneToolContext(fullData: ZiweiData | null | undefined) {
+  const astrolabe = fullData?.astrolabe;
+  const birthday = astrolabe?.solarDate;
+  if (typeof birthday !== 'string' || !/^\d{4}-\d{1,2}-\d{1,2}$/.test(birthday)) return undefined;
+  const hour = fullData?.originalTime?.hour ?? 0;
+  const gender = astrolabe?.gender === '男' || astrolabe?.gender === 'male' ? 'male' : 'female';
+  return { birthday, hourIndex: getShichenIndexFromHour(hour), gender } as const;
 }
 
 export { fetchRAGContext };

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Message, PersonaType, generateMasterPrompt, getDefaultSystemPrompt, getLLMResponse } from '@/lib/ai';
+import { Message, PersonaType, buildFortuneToolContext, generateMasterPrompt, getDefaultSystemPrompt, getLLMResponse } from '@/lib/ai';
 import type { ContextStatus, ZiweiData } from '@/types';
 
 type LoadingStage = 'context' | 'model';
@@ -95,7 +95,12 @@ export function useAIChat(
         ...newMessages.filter((message) => message.role !== 'system'),
       ];
 
-      const stream = await getLLMResponse(dynamicMessages, model, abortControllerRef.current.signal);
+      const stream = await getLLMResponse(
+        dynamicMessages,
+        model,
+        abortControllerRef.current.signal,
+        buildFortuneToolContext(resolvedZiweiData),
+      );
       if (!stream) throw new Error('Failed to get response stream');
 
       reader = stream.getReader();

@@ -2,6 +2,7 @@
 const path = require('path');
 const iztro = require('iztro');
 const RetrievalService = require('../backend/services/retrievalService');
+const { ZIWEI_HOROSCOPE_TOOL, queryZiweiHoroscope } = require('./ziweiHoroscopeTool');
 
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config({ path: path.join(__dirname, '../backend/.env') });
@@ -214,13 +215,18 @@ async function proxyLLMChat(res, body) {
     return;
   }
 
-  const { model, messages, stream = true, max_tokens } = body || {};
+  const { model, messages, stream = true, max_tokens, fortuneContext } = body || {};
   if (!AVAILABLE_LLM_MODELS.has(model)) {
     sendJson(res, 400, { error: 'Unsupported model' });
     return;
   }
   if (!Array.isArray(messages) || messages.length === 0) {
     sendJson(res, 400, { error: 'Missing messages' });
+    return;
+  }
+
+  if (fortuneContext) {
+    await proxyLLMChatWithHoroscopeTool(res, { apiKey, model, messages, stream, max_tokens, fortuneContext });
     return;
   }
 
@@ -262,6 +268,94 @@ async function proxyLLMChat(res, body) {
     res.end();
   } finally {
     reader.releaseLock();
+  }
+}
+
+function sendOpenAICompatibleTextStream(res, content) {
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  const created = Math.floor(Date.now() / 1000);
+  const id = `chatcmpl-${Date.now()}`;
+  const writeChunk = (delta, finishReason = null) => res.write(`data: ${JSON.stringify({
+    id,
+    object: 'chat.completion.chunk',
+    created,
+    model: 'ziwei-tool-result',
+    choices: [{ index: 0, delta, finish_reason: finishReason }],
+  })}\n\n`);
+  if (content) writeChunk({ content });
+  writeChunk({}, 'stop');
+  res.end('data: [DONE]\n\n');
+}
+
+async function proxyLLMChatWithHoroscopeTool(res, { apiKey, model, messages, stream, max_tokens, fortuneContext }) {
+  const requestMessages = [...messages];
+  const maxToolRounds = 2;
+  try {
+    for (let round = 0; round <= maxToolRounds; round += 1) {
+      const requestBody = {
+        model,
+        messages: requestMessages,
+        stream: false,
+        tools: [ZIWEI_HOROSCOPE_TOOL],
+        tool_choice: 'auto',
+      };
+      if (Number.isInteger(max_tokens) && max_tokens > 0) requestBody.max_tokens = max_tokens;
+
+      const upstream = await fetch(`${PROVIDER_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify(requestBody),
+      });
+      if (!upstream.ok) {
+        res.statusCode = upstream.status;
+        res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/json');
+        res.end(await upstream.text());
+        return;
+      }
+
+      const completion = await upstream.json();
+      const assistantMessage = completion?.choices?.[0]?.message;
+      const toolCalls = assistantMessage?.tool_calls || [];
+      if (!toolCalls.length) {
+        sendOpenAICompatibleTextStream(res, assistantMessage?.content || '');
+        return;
+      }
+      if (round === maxToolRounds) {
+        sendOpenAICompatibleTextStream(res, assistantMessage?.content || '我暂时无法完成更多运限查询，请缩小到一个年份或月份再试。');
+        return;
+      }
+
+      requestMessages.push(assistantMessage);
+      for (const toolCall of toolCalls) {
+        const name = toolCall?.function?.name;
+        if (name !== 'get_ziwei_horoscope') {
+          requestMessages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ error: '不支持的计算工具' }) });
+          continue;
+        }
+        let args;
+        try {
+          args = JSON.parse(toolCall.function.arguments || '{}');
+        } catch {
+          requestMessages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ error: '工具参数不是有效JSON' }) });
+          continue;
+        }
+        try {
+          const result = queryZiweiHoroscope(fortuneContext, args);
+          requestMessages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify(result) });
+        } catch (error) {
+          requestMessages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ error: error?.message || '运限计算失败' }) });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[ziwei_horoscope_tool_error]', error?.message || error);
+    if (stream) {
+      sendOpenAICompatibleTextStream(res, '运限查询暂时失败，请稍后重试。');
+    } else {
+      sendJson(res, 502, { error: '运限查询暂时失败' });
+    }
   }
 }
 

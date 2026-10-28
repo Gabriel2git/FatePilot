@@ -12,6 +12,8 @@ const chart = source('src/components/ChartView/index.tsx');
 const palaceCell = source('src/components/ZiweiChart/PalaceCell.tsx');
 const centerInfo = source('src/components/ZiweiChart/CenterInfo.tsx');
 const chartDecorations = source('src/components/ZiweiChart/chartDecorations.ts');
+const aiSource = source('src/lib/ai.ts');
+const chatHook = source('src/hooks/useAIChat.ts');
 
 test('tools menu closes on outside pointer and Escape', () => {
   assert.match(page, /addEventListener\('pointerdown', closeOnOutsidePointer\)/);
@@ -68,6 +70,18 @@ test('chat text is reduced and only prompt debugging remains in the tools menu',
   assert.match(styles, /\.fp-chat-message\s*\{[^}]*font-size:\s*14px/s);
   assert.match(page, /setShowDebug\(true\).*调试提示词/s);
   assert.doesNotMatch(chat, /导出|导入/);
+});
+
+test('AI can query engine-computed flows outside the currently selected period', () => {
+  const server = source('../src/server.js');
+  assert.match(aiSource, /Dynamic Fortune Lookup/);
+  assert.match(chatHook, /buildFortuneToolContext\(resolvedZiweiData\)/);
+  assert.match(aiSource, /requestBody\.fortuneContext = fortuneContext/);
+  assert.match(server, /tools: \[ZIWEI_HOROSCOPE_TOOL\]/);
+  assert.match(server, /queryZiweiHoroscope\(fortuneContext, args\)/);
+  assert.match(server, /targetMonth/);
+  assert.match(aiSource, /selectedContext\?\.targetMonth \? `\\n│   └流月宫位/);
+  assert.match(aiSource, /monthlyMutagen/);
 });
 
 test('decade selection keeps the reference year when it belongs to that decade', () => {
