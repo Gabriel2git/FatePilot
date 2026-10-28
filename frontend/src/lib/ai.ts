@@ -78,7 +78,7 @@ function formatMutagen(mutagen: string[] | undefined): string {
 function getMutagenTagByStarName(
   starName: string | undefined,
   mutagen: string[] | undefined,
-  prefix: '' | '大限' | '流年',
+  prefix: '' | '大限' | '流年' | '流月',
 ): string {
   if (!starName || !Array.isArray(mutagen) || mutagen.length === 0) return '';
   const index = mutagen.findIndex((name) => name === starName);
@@ -145,6 +145,7 @@ function buildPalaceText(astrolabe: any, horoscope: any, selectedContext?: Selec
     .map((palace, palaceIndex) => {
       const decadalRoleName = resolvePalaceRoleName(palaceIndex, 'decadal', horoscope, palace, selectedContext);
       const yearlyRoleName = resolvePalaceRoleName(palaceIndex, 'yearly', horoscope, palace, selectedContext);
+      const monthlyRoleName = Array.isArray(horoscope?.monthly?.palaceNames) ? horoscope.monthly.palaceNames[palaceIndex] || '无' : '无';
       const decadalMutagen = selectedContext?.decadal?.mutagen || horoscope?.decadal?.mutagen;
       const yearlyMutagen = selectedContext?.yearly?.mutagen || horoscope?.yearly?.mutagen;
 
@@ -164,7 +165,8 @@ function buildPalaceText(astrolabe: any, horoscope: any, selectedContext?: Selec
 │   ├大限 : ${start} ~ ${end}虚岁
 │   ├小限 : ${minorAges}虚岁
 │   ├大限宫位 : ${decadalRoleName}
-│   └流年宫位 : ${yearlyRoleName}`;
+│   ├流年宫位 : ${yearlyRoleName}
+│   └流月宫位 : ${monthlyRoleName}`;
     })
     .join('\n\n');
 }
@@ -183,6 +185,7 @@ function buildSelectedSummary(selectedContext: SelectedContext | undefined): str
     `当前选中大限：${selectedContext.decadal?.heavenlyStem || ''}${selectedContext.decadal?.earthlyBranch || ''}（${decadalRange}）`,
     `当前大限四化：${formatMutagen(selectedContext.decadal?.mutagen)}`,
     `当前流年四化：${formatMutagen(selectedContext.yearly?.mutagen)}`,
+    ...(selectedContext.targetMonth ? [`当前选中流月：${selectedContext.targetYear}年${selectedContext.targetMonth}月（${selectedContext.monthly?.heavenlyStem || ''}${selectedContext.monthly?.earthlyBranch || ''}）`, `当前流月四化：${formatMutagen(selectedContext.monthly?.mutagen)}`] : []),
   ].join('\n');
 }
 

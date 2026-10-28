@@ -231,6 +231,11 @@ body {
 .fp-palace-cell.is-current-yearly { border: 2px solid var(--fp-red); background: var(--fp-red-soft); }
 .fp-palace-cell.is-current-decadal:not(.is-current-yearly) { border: 2px solid var(--fp-gold); background: color-mix(in srgb, var(--fp-gold) 11%, var(--fp-card)); }
 .fp-palace-cell.is-current-yearly.is-current-decadal { box-shadow: inset 0 0 0 2px var(--fp-gold); }
+.fp-palace-cell.is-current-monthly { outline: 2px solid #387f72; outline-offset: -3px; }
+.fp-mutagen-monthly-row { color: #387f72; font-weight: 700; }
+.fp-dot-month { background: #387f72; }
+.fp-monthly-summary { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 10px; padding: 11px 13px; border: 1px solid color-mix(in srgb, #387f72 26%, var(--fp-line)); border-radius: 9px; background: color-mix(in srgb, #387f72 7%, var(--fp-card)); color: var(--fp-text); font-size: 11px; }
+.fp-monthly-summary strong { color: #387f72; }
 .fp-palace-cell.is-selected { position: relative; z-index: 1; outline: 2px dashed var(--fp-ink); outline-offset: -5px; }
 @media (max-width: 620px) {
   .fp-palace-cell { padding: 3px !important; }

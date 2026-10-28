@@ -47,7 +47,7 @@ class DataCache<T> {
 const liteCache = new DataCache<ZiweiLiteData>();
 const contextCache = new DataCache<ZiweiContextData>();
 
-function getRequestKey(birthData: BirthData, targetYear: number) {
+function getRequestKey(birthData: BirthData, targetYear: number, targetMonth?: number | null) {
   return [
     birthData.birthday,
     birthData.birthTime,
@@ -57,6 +57,7 @@ function getRequestKey(birthData: BirthData, targetYear: number) {
     birthData.longitude,
     birthData.isLeap,
     targetYear,
+    targetMonth || 'year',
   ].join('_');
 }
 
@@ -99,7 +100,7 @@ export function useZiweiData() {
     }
   };
 
-  const buildRequestBody = (data: BirthData, targetYear: number) => ({
+  const buildRequestBody = (data: BirthData, targetYear: number, targetMonth?: number | null) => ({
     birthday: data.birthday,
     hourIndex: getShichenIndexFromHour(data.birthTime),
     minute: data.birthMinute,
@@ -108,22 +109,23 @@ export function useZiweiData() {
     isLeap: data.isLeap,
     longitude: data.longitude,
     targetYear,
+    ...(targetMonth ? { targetMonth } : {}),
   });
 
-  const fetchLiteData = async (data: BirthData, targetYear: number): Promise<ZiweiLiteData> => {
+  const fetchLiteData = async (data: BirthData, targetYear: number, targetMonth?: number | null): Promise<ZiweiLiteData> => {
     const response = await fetchWithRetry(`${API_BASE_URL}/api/ziwei-lite`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildRequestBody(data, targetYear)),
+      body: JSON.stringify(buildRequestBody(data, targetYear, targetMonth)),
     });
     return response.json();
   };
 
-  const fetchContextData = async (data: BirthData, targetYear: number): Promise<ZiweiContextData> => {
+  const fetchContextData = async (data: BirthData, targetYear: number, targetMonth?: number | null): Promise<ZiweiContextData> => {
     const response = await fetchWithRetry(`${API_BASE_URL}/api/ziwei-context`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildRequestBody(data, targetYear)),
+      body: JSON.stringify(buildRequestBody(data, targetYear, targetMonth)),
     });
     return response.json();
   };
@@ -276,6 +278,31 @@ export function useZiweiData() {
     }
   };
 
+  const updateHoroscopeMonth = async (birthData: BirthData, year: number, month: number): Promise<ZiweiData> => {
+    setIsRefreshingData(true);
+    setError(null);
+    const requestKey = getRequestKey(birthData, year, month);
+    activeRequestKeyRef.current = requestKey;
+    try {
+      const liteData = await fetchLiteData(birthData, year, month);
+      liteCache.set(requestKey, liteData);
+      const contextData = await fetchContextData(birthData, year, month);
+      contextCache.set(requestKey, contextData);
+      const merged = mergeZiweiData(liteData, contextData, attachOriginalTime(birthData)) as ZiweiData;
+      setHoroscopeYear(year);
+      setZiweiData(merged);
+      setContextStatus('ready');
+      return merged;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`更新流月数据失败: ${errorMessage}`);
+      setContextStatus('error');
+      throw err;
+    } finally {
+      setIsRefreshingData(false);
+    }
+  };
+
   return {
     ziweiData,
     isRefreshingData,
@@ -284,6 +311,7 @@ export function useZiweiData() {
     error,
     loadZiweiData,
     updateHoroscopeYear,
+    updateHoroscopeMonth,
     ensureZiweiContext,
     setZiweiData,
     setError,

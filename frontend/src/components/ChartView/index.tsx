@@ -47,8 +47,10 @@ interface ChartViewProps {
   selectedPalace: any | null;
   setSelectedPalace: (palace: any | null) => void;
   onStartReading: () => void;
-  scope: 'natal' | 'decadal' | 'yearly';
-  setScope: (scope: 'natal' | 'decadal' | 'yearly') => void;
+  scope: 'natal' | 'decadal' | 'yearly' | 'monthly';
+  setScope: (scope: 'natal' | 'decadal' | 'yearly' | 'monthly') => void;
+  selectedMonth: number;
+  onMonthChange: (year: number, month: number) => void;
 }
 
 export default function ChartView({
@@ -73,6 +75,8 @@ export default function ChartView({
   onStartReading,
   scope,
   setScope,
+  selectedMonth,
+  onMonthChange,
 }: ChartViewProps) {
   const chartRef = useRef<HTMLDivElement>(null);
 
@@ -161,9 +165,11 @@ export default function ChartView({
     : Array.from({ length: 5 }, (_, index) => horoscopeYear - 2 + index);
   const readingPeriod = selectedDecadal
     ? `${selectedDecadal.start}–${selectedDecadal.end}岁大限${selectedYear ? ` · ${selectedYear}年流年` : ''}`
-    : `${selectedYear || horoscopeYear}年流年`;
+    : scope === 'monthly' ? `${selectedYear || horoscopeYear}年${selectedMonth}月流月` : `${selectedYear || horoscopeYear}年流年`;
   const majorStars = (activePalace?.majorStars || []).map((star: any) => star.name).filter(Boolean).join('、');
   const minorStars = (activePalace?.minorStars || []).slice(0, 4).map((star: any) => star.name).filter(Boolean).join('、');
+  const activeMonthPalaceIndex = ziweiData?.horoscope?.monthly?.palaceNames?.indexOf('命宫') ?? -1;
+  const monthlyLifePalace = activeMonthPalaceIndex >= 0 ? ziweiData?.astrolabe?.palaces?.[activeMonthPalaceIndex] : null;
 
   return (
     <div className="fp-chart-page">
@@ -207,11 +213,17 @@ export default function ChartView({
               }}>本命</button>
               <button className={scope === 'decadal' ? 'active' : ''} onClick={() => setScope('decadal')}>大限</button>
               <button className={scope === 'yearly' ? 'active' : ''} onClick={() => setScope('yearly')}>流年</button>
+              <button className={scope === 'monthly' ? 'active' : ''} onClick={() => {
+                const year = selectedYear || horoscopeYear;
+                setSelectedYear(year);
+                setScope('monthly');
+                onMonthChange(year, selectedMonth);
+              }}>流月</button>
               <span>{scope === 'natal'
                 ? '本命结构'
                 : scope === 'decadal'
                   ? selectedDecadal ? `${selectedDecadal.start}–${selectedDecadal.end} 岁大限` : '请选择大限'
-                  : `${selectedYear || horoscopeYear} 年流年`}</span>
+                  : scope === 'monthly' ? `${selectedYear || horoscopeYear}年${selectedMonth}月流月` : `${selectedYear || horoscopeYear} 年流年`}</span>
             </div>
 
             {scope === 'decadal' && (
@@ -247,17 +259,31 @@ export default function ChartView({
               </div>
             )}
 
+            {scope === 'monthly' && (
+              <div className="fp-period-options" aria-label="选择流月">
+                {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => (
+                  <button key={month} onClick={() => onMonthChange(selectedYear || horoscopeYear, month)} className={selectedMonth === month ? 'active' : ''} aria-pressed={selectedMonth === month}>{month}月</button>
+                ))}
+              </div>
+            )}
+
             <div className="fp-chart-grid-wrap" ref={chartRef}>
               <ZiweiChart
                 ziweiData={{
                   astrolabe: ziweiData?.astrolabe,
                   horoscope: ziweiData?.horoscope,
                   targetYear: ziweiData?.targetYear,
+                  targetMonth: ziweiData?.targetMonth,
                 }}
                 onSelectPalace={setSelectedPalace}
               />
             </div>
-            <div className="fp-chart-legend"><span><i className="fp-dot-red" />流年宫位</span><span><i className="fp-dot-gold" />大限宫位</span><span><i className="fp-dot-selected" />选中宫位</span><span><i className="fp-dot-trine" />三方四正</span><span><i className="fp-dot-self" />↗ 自化</span><span><i className="fp-dot-considered" />↙ 视同自化</span></div>
+            {scope === 'monthly' && <div className="fp-monthly-summary" aria-live="polite">
+              <strong>{selectedYear || horoscopeYear}年{selectedMonth}月流月</strong>
+              <span>流月命宫：{monthlyLifePalace?.name || '—'}（{monthlyLifePalace?.heavenlyStem || ''}{monthlyLifePalace?.earthlyBranch || '—'}）</span>
+              <span>流月四化：{(ziweiData?.horoscope?.monthly?.mutagen || []).map((star: string, index: number) => `${star}${['禄', '权', '科', '忌'][index]}`).join('、') || '—'}</span>
+            </div>}
+            <div className="fp-chart-legend"><span><i className="fp-dot-red" />流年宫位</span><span><i className="fp-dot-month" />流月宫位</span><span><i className="fp-dot-gold" />大限宫位</span><span><i className="fp-dot-selected" />选中宫位</span><span><i className="fp-dot-trine" />三方四正</span><span><i className="fp-dot-self" />↗ 自化</span><span><i className="fp-dot-considered" />↙ 视同自化</span></div>
           </section>
 
           <aside className="fp-palace-detail">

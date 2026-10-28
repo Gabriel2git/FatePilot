@@ -52,10 +52,12 @@ export default function PalaceCell({
 
   const isCurrentDecadal = horoscope?.decadal?.earthlyBranch === palace.earthlyBranch;
   const isCurrentYearly = horoscope?.yearly?.earthlyBranch === palace.earthlyBranch;
+  const isCurrentMonthly = horoscope?.monthly?.earthlyBranch === palace.earthlyBranch;
   const isBodyPalace = palace.earthlyBranch === earthlyBranchOfBodyPalace;
   const isOriginPalace = palace.heavenlyStem === birthYearStem;
   const decadalPalace = getDynamicPalaceName(palace.index, horoscope?.decadal?.palaceNames);
   const yearlyPalace = getDynamicPalaceName(palace.index, horoscope?.yearly?.palaceNames);
+  const monthlyPalace = getDynamicPalaceName(palace.index, horoscope?.monthly?.palaceNames);
   const allStars = [...(palace.majorStars || []), ...(palace.minorStars || [])];
   const selfMarkers = getSelfTransformationMarkers(palace, palaces);
   const decadalMutagen = horoscope?.decadal?.mutagen;
@@ -65,7 +67,7 @@ export default function PalaceCell({
   return (
     <div className={`fp-palace-cell w-full h-full p-1 sm:p-2 flex flex-col ${
       isCurrentYearly ? 'is-current-yearly' : ''
-    } ${isCurrentDecadal ? 'is-current-decadal' : ''} ${isSelected ? 'is-selected' : ''}`}>
+  } ${isCurrentDecadal ? 'is-current-decadal' : ''} ${isCurrentMonthly ? 'is-current-monthly' : ''} ${isSelected ? 'is-selected' : ''}`}>
       <div className="fp-palace-info-rows" style={{ '--fp-star-count': starColumnCount } as React.CSSProperties}>
         <PalaceDataRow
           label="星曜"
@@ -125,6 +127,15 @@ export default function PalaceCell({
             </span>;
           }}
         />
+        <PalaceDataRow
+          label="流月"
+          stars={allStars}
+          rowClass="fp-mutagen-monthly-row"
+          renderCell={(star, index) => {
+            const tag = getMutagenTag(star.name, horoscope?.monthly?.mutagen);
+            return <span key={`${star.name}-monthly-${index}`} title={tag ? `${star.name}流月化${tag}` : star.name}>{tag || '\u00a0'}</span>;
+          }}
+        />
       </div>
       <div className="fp-palace-adjectives" title={(palace.adjectiveStars || []).map((star: any) => star.name).join(' ')}>
         {(palace.adjectiveStars || []).slice(0, 4).map((star: any) => star.name).join(' ')}
@@ -139,9 +150,10 @@ export default function PalaceCell({
             <strong>{palace.name}</strong>
             {isBodyPalace && <span className="fp-body-tag">身</span>}
           </span>
-          {(decadalPalace || yearlyPalace) && <span className="fp-palace-dynamic-names">
+          {(decadalPalace || yearlyPalace || monthlyPalace) && <span className="fp-palace-dynamic-names">
             {decadalPalace && `大${decadalPalace.substring(0, 2)}`}
             {yearlyPalace && ` 年${yearlyPalace.substring(0, 2)}`}
+            {monthlyPalace && ` 月${monthlyPalace.substring(0, 2)}`}
           </span>}
         </div>
         <div className="fp-palace-meta-right">

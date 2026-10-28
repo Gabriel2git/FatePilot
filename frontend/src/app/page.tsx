@@ -43,7 +43,8 @@ export default function Home() {
   const toolsMenuRef = useRef<HTMLDetailsElement>(null);
   const [selectedPalace, setSelectedPalace] = useState<any | null>(null);
   const [isLoadingChart, setIsLoadingChart] = useState(false);
-  const [chartScope, setChartScope] = useState<'natal' | 'decadal' | 'yearly'>('natal');
+  const [chartScope, setChartScope] = useState<'natal' | 'decadal' | 'yearly' | 'monthly'>('natal');
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedDecadal, setSelectedDecadal] = useState<DecadalInfo | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
 
@@ -55,6 +56,7 @@ export default function Home() {
     error,
     loadZiweiData,
     updateHoroscopeYear,
+    updateHoroscopeMonth,
     ensureZiweiContext,
     setError,
   } = useZiweiData();
@@ -64,7 +66,9 @@ export default function Home() {
       ? selectedDecadal
         ? `大限 ${selectedDecadal.start}–${selectedDecadal.end} 岁${selectedYear ? ` · 流年 ${selectedYear}` : ''}`
         : '大限待选择'
-      : `流年 ${selectedYear || horoscopeYear}`;
+      : chartScope === 'monthly'
+        ? `${selectedYear || horoscopeYear}年${selectedMonth}月流月`
+        : `流年 ${selectedYear || horoscopeYear}`;
   const readingContext = `${selectedPalace?.name || '全盘'} · ${selectedPeriod}`;
   const resolveCompleteZiweiData = useCallback(async () => {
     if (!birthData) return ziweiData;
@@ -146,6 +150,18 @@ export default function Home() {
       updateChatForHoroscope(realZiweiData);
     } catch (err) {
       console.error('更新命盘数据失败:', err);
+    }
+  };
+
+  const handleHoroscopeMonthChange = async (year: number, month: number) => {
+    if (!birthData || isRefreshingData) return;
+    setSelectedMonth(month);
+    setSelectedYear(year);
+    try {
+      const data = await updateHoroscopeMonth(birthData, year, month);
+      updateChatForHoroscope(data);
+    } catch (err) {
+      console.error('更新流月命盘失败:', err);
     }
   };
 
@@ -322,6 +338,8 @@ export default function Home() {
             onStartReading={() => setCurrentPage('ai')}
             scope={chartScope}
             setScope={setChartScope}
+            selectedMonth={selectedMonth}
+            onMonthChange={handleHoroscopeMonthChange}
           />
         )}
 

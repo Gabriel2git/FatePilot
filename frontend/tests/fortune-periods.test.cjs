@@ -39,3 +39,13 @@ test('uses iztro palace names by palace index, including the modern 交友 label
   assert.equal(getDynamicPalaceName(lifePalace.index, horoscope.yearly.palaceNames), '命宫');
   assert.equal(getDynamicPalaceName(servantPalace.index, horoscope.yearly.palaceNames), '交友');
 });
+
+test('iztro returns monthly palace mapping and mutagen for a date in the requested month', () => {
+  const astrolabe = iztro.astro.bySolar('2000-05-23', 5, 'male', true, 'zh-CN');
+  const horoscope = astrolabe.horoscope('2026-07-15');
+
+  assert.ok(horoscope.monthly);
+  assert.equal(horoscope.monthly.palaceNames.length, 12);
+  assert.equal(horoscope.monthly.mutagen.length, 4);
+  assert.ok(horoscope.monthly.earthlyBranch);
+});

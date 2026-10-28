@@ -90,6 +90,11 @@ function getHoroscopeForYear(astrolabe, year) {
   return astrolabe.horoscope(`${year}-${MID_YEAR_ANCHOR}`);
 }
 
+function getHoroscopeForMonth(astrolabe, year, month) {
+  const day = Math.min(15, new Date(year, month, 0).getDate());
+  return astrolabe.horoscope(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+}
+
 function normalizeZiweiInput(body) {
   const birthday = typeof body?.birthday === 'string' ? body.birthday : '';
   const hourIndex = Number(body?.hourIndex);
@@ -97,6 +102,7 @@ function normalizeZiweiInput(body) {
   const isLunar = Boolean(body?.isLunar);
   const isLeap = Boolean(body?.isLeap);
   const targetYear = body?.targetYear;
+  const targetMonth = body?.targetMonth;
 
   if (!birthday || Number.isNaN(hourIndex) || !gender) {
     return { error: 'Missing required parameters' };
@@ -111,6 +117,11 @@ function normalizeZiweiInput(body) {
     return { error: `targetYear must be an integer between ${MIN_YEAR} and ${MAX_YEAR}` };
   }
 
+  const normalizedTargetMonth = targetMonth === undefined ? null : Number(targetMonth);
+  if (normalizedTargetMonth !== null && (!Number.isInteger(normalizedTargetMonth) || normalizedTargetMonth < 1 || normalizedTargetMonth > 12)) {
+    return { error: 'targetMonth must be an integer between 1 and 12' };
+  }
+
   return {
     input: {
       birthday,
@@ -119,6 +130,7 @@ function normalizeZiweiInput(body) {
       isLunar,
       isLeap,
       normalizedTargetYear,
+      normalizedTargetMonth,
     },
   };
 }
@@ -134,8 +146,8 @@ function getAstrolabeKey(input) {
   ].join('|');
 }
 
-function getYearKey(input, targetYear) {
-  return `${getAstrolabeKey(input)}|${targetYear}|${MID_YEAR_ANCHOR}`;
+function getYearKey(input, targetYear, targetMonth = null) {
+  return `${getAstrolabeKey(input)}|${targetYear}|${targetMonth || MID_YEAR_ANCHOR}`;
 }
 
 function getOrCreateAstrolabe(input) {
@@ -486,7 +498,7 @@ function buildPromptDecadalBlocks(astrolabe, referenceYear, referenceHoroscope, 
   });
 }
 
-function buildSelectedContext(targetYear, horoscope, astrolabe) {
+function buildSelectedContext(targetYear, horoscope, astrolabe, targetMonth = null) {
   const decadalBranch = horoscope?.decadal?.earthlyBranch || '';
   const decadalPalace = astrolabe?.palaces?.find((palace) => palace.earthlyBranch === decadalBranch);
   const decadalRange = Array.isArray(decadalPalace?.decadal?.range) ? decadalPalace.decadal.range : [];
@@ -494,6 +506,7 @@ function buildSelectedContext(targetYear, horoscope, astrolabe) {
   return {
     baselineYear: CURRENT_BASELINE_YEAR,
     targetYear,
+    targetMonth,
     nominalAge: horoscope?.age?.nominalAge ?? null,
     decadal: {
       heavenlyStem: horoscope?.decadal?.heavenlyStem || '',
@@ -506,24 +519,31 @@ function buildSelectedContext(targetYear, horoscope, astrolabe) {
       earthlyBranch: horoscope?.yearly?.earthlyBranch || '',
       mutagen: horoscope?.yearly?.mutagen || [],
     },
+    monthly: targetMonth ? {
+      heavenlyStem: horoscope?.monthly?.heavenlyStem || '',
+      earthlyBranch: horoscope?.monthly?.earthlyBranch || '',
+      palaceNames: horoscope?.monthly?.palaceNames || [],
+      mutagen: horoscope?.monthly?.mutagen || [],
+    } : null,
   };
 }
 
-function buildLitePayload(astrolabeRaw, targetYear, horoscopeRaw) {
-  const horoscope = horoscopeRaw || getHoroscopeForYear(astrolabeRaw, targetYear);
+function buildLitePayload(astrolabeRaw, targetYear, horoscopeRaw, targetMonth = null) {
+  const horoscope = horoscopeRaw || (targetMonth ? getHoroscopeForMonth(astrolabeRaw, targetYear, targetMonth) : getHoroscopeForYear(astrolabeRaw, targetYear));
   return {
     astrolabe: serializeAstrolabe(astrolabeRaw),
     horoscope: serializeHoroscope(horoscope),
     targetYear,
-    selectedContext: buildSelectedContext(targetYear, horoscope, astrolabeRaw),
+    selectedContext: buildSelectedContext(targetYear, horoscope, astrolabeRaw, targetMonth),
+    targetMonth,
   };
 }
 
-function buildContextPayload(astrolabeRaw, targetYear, horoscopeRaw) {
+function buildContextPayload(astrolabeRaw, targetYear, horoscopeRaw, targetMonth = null) {
   const horoscope = horoscopeRaw || getHoroscopeForYear(astrolabeRaw, targetYear);
   return {
     targetYear,
-    selectedContext: buildSelectedContext(targetYear, horoscope, astrolabeRaw),
+    selectedContext: buildSelectedContext(targetYear, horoscope, astrolabeRaw, targetMonth),
     decadalYearlyInfo: buildDecadalYearlyInfo(astrolabeRaw, targetYear, horoscope),
     promptDecadalBlocks: buildPromptDecadalBlocks(astrolabeRaw, targetYear, horoscope, 6),
   };
@@ -579,7 +599,8 @@ const server = http.createServer(async (req, res) => {
       }
       const { input } = normalized;
       const targetYear = input.normalizedTargetYear;
-      const yearKey = getYearKey(input, targetYear);
+      const targetMonth = input.normalizedTargetMonth;
+      const yearKey = getYearKey(input, targetYear, targetMonth);
 
       const cachedLite = getCacheValue(litePayloadCache, yearKey);
       if (cachedLite) {
@@ -588,8 +609,8 @@ const server = http.createServer(async (req, res) => {
       }
 
       const astrolabeRaw = getOrCreateAstrolabe(input);
-      const horoscopeRaw = getHoroscopeForYear(astrolabeRaw, targetYear);
-      const payload = buildLitePayload(astrolabeRaw, targetYear, horoscopeRaw);
+      const horoscopeRaw = targetMonth ? getHoroscopeForMonth(astrolabeRaw, targetYear, targetMonth) : getHoroscopeForYear(astrolabeRaw, targetYear);
+      const payload = buildLitePayload(astrolabeRaw, targetYear, horoscopeRaw, targetMonth);
       setCacheValue(litePayloadCache, yearKey, payload);
 
       console.log(
@@ -621,7 +642,8 @@ const server = http.createServer(async (req, res) => {
       }
       const { input } = normalized;
       const targetYear = input.normalizedTargetYear;
-      const yearKey = getYearKey(input, targetYear);
+      const targetMonth = input.normalizedTargetMonth;
+      const yearKey = getYearKey(input, targetYear, targetMonth);
 
       const cachedContext = getCacheValue(contextPayloadCache, yearKey);
       if (cachedContext) {
@@ -630,8 +652,8 @@ const server = http.createServer(async (req, res) => {
       }
 
       const astrolabeRaw = getOrCreateAstrolabe(input);
-      const horoscopeRaw = getHoroscopeForYear(astrolabeRaw, targetYear);
-      const contextPayload = buildContextPayload(astrolabeRaw, targetYear, horoscopeRaw);
+      const horoscopeRaw = targetMonth ? getHoroscopeForMonth(astrolabeRaw, targetYear, targetMonth) : getHoroscopeForYear(astrolabeRaw, targetYear);
+      const contextPayload = buildContextPayload(astrolabeRaw, targetYear, horoscopeRaw, targetMonth);
       setCacheValue(contextPayloadCache, yearKey, contextPayload);
 
       console.log(
@@ -662,21 +684,22 @@ const server = http.createServer(async (req, res) => {
       }
       const { input } = normalized;
       const targetYear = input.normalizedTargetYear;
-      const yearKey = getYearKey(input, targetYear);
+      const targetMonth = input.normalizedTargetMonth;
+      const yearKey = getYearKey(input, targetYear, targetMonth);
 
       let litePayload = getCacheValue(litePayloadCache, yearKey);
       let contextPayload = getCacheValue(contextPayloadCache, yearKey);
 
       const astrolabeRaw = getOrCreateAstrolabe(input);
-      const horoscopeRaw = getHoroscopeForYear(astrolabeRaw, targetYear);
+      const horoscopeRaw = targetMonth ? getHoroscopeForMonth(astrolabeRaw, targetYear, targetMonth) : getHoroscopeForYear(astrolabeRaw, targetYear);
 
       if (!litePayload) {
-        litePayload = buildLitePayload(astrolabeRaw, targetYear, horoscopeRaw);
+        litePayload = buildLitePayload(astrolabeRaw, targetYear, horoscopeRaw, targetMonth);
         setCacheValue(litePayloadCache, yearKey, litePayload);
       }
 
       if (!contextPayload) {
-        contextPayload = buildContextPayload(astrolabeRaw, targetYear, horoscopeRaw);
+        contextPayload = buildContextPayload(astrolabeRaw, targetYear, horoscopeRaw, targetMonth);
         setCacheValue(contextPayloadCache, yearKey, contextPayload);
       }
 

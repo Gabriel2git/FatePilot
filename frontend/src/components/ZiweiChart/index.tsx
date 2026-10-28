@@ -10,6 +10,7 @@ interface ZiweiChartProps {
     astrolabe: any;
     horoscope?: any;
     targetYear?: number;
+    targetMonth?: number | null;
   };
   onSelectPalace?: (palace: any) => void;
 }

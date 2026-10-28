@@ -111,6 +111,7 @@ export interface DecadalBlock {
 export interface SelectedContext {
   baselineYear: number;
   targetYear: number;
+  targetMonth?: number | null;
   nominalAge: number | null;
   decadal: {
     heavenlyStem: string;
@@ -123,6 +124,7 @@ export interface SelectedContext {
     earthlyBranch: string;
     mutagen: string[];
   };
+  monthly?: { heavenlyStem: string; earthlyBranch: string; palaceNames: string[]; mutagen: string[] } | null;
 }
 
 export interface ZiweiData {
@@ -136,6 +138,7 @@ export interface ZiweiData {
     minute: number;
   };
   targetYear?: number;
+  targetMonth?: number | null;
 }
 
 export interface ZiweiLiteData {
@@ -143,6 +146,7 @@ export interface ZiweiLiteData {
   horoscope?: Horoscope;
   selectedContext?: SelectedContext;
   targetYear?: number;
+  targetMonth?: number | null;
 }
 
 export interface ZiweiContextData {
