@@ -145,6 +145,17 @@ export function useAIChat(
         }
       }
 
+      if (!aiResponseContent.trim()) {
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[tempMessageIndex] = {
+            role: 'assistant',
+            content: '连接已结束，但没有收到回答。请重试；如果反复出现，请检查模型服务是否可用。',
+          };
+          return updated;
+        });
+      }
+
       if (hasReasoningStream) {
         console.info('[AI] reasoning_content detected in stream:', model);
       }

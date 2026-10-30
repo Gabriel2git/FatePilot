@@ -1,6 +1,6 @@
 ﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import AIChat from '@/components/AIChat';
@@ -61,6 +61,27 @@ function AIFortuneTellerContent({
   onSelectedModelChange,
 }: AIFortuneTellerProps) {
   const { isAuthenticated } = useAuth();
+  const settingsRef = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const settings = settingsRef.current;
+      if (settings?.open && (!event.target || !settings.contains(event.target as Node))) {
+        settings.removeAttribute('open');
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') settingsRef.current?.removeAttribute('open');
+    };
+
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, []);
+
   if (!isAuthenticated) {
     return <AuthGuard>{null}</AuthGuard>;
   }
@@ -73,7 +94,7 @@ function AIFortuneTellerContent({
           <p title={`已带入：${readingContext}`}>已带入：{readingContext}</p>
         </div>
         <div className="fp-ai-page-actions">
-          <details className="fp-ai-settings">
+          <details ref={settingsRef} className="fp-ai-settings">
             <summary aria-label="打开或关闭对话设置">对话设置</summary>
             <div className="fp-ai-settings-panel">
               <div className="fp-ai-settings-field">

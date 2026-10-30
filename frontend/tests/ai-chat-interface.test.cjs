@@ -21,6 +21,14 @@ test('tools menu closes on outside pointer and Escape', () => {
   assert.match(page, /event\.key === 'Escape'/);
 });
 
+test('conversation settings close on outside pointer and Escape', () => {
+  assert.match(aiPage, /const settingsRef = useRef<HTMLDetailsElement>\(null\)/);
+  assert.match(aiPage, /settings\.contains\(event\.target as Node\)/);
+  assert.match(aiPage, /settingsRef\.current\?\.removeAttribute\('open'\)/);
+  assert.match(aiPage, /addEventListener\('pointerdown', closeOnOutsidePointer\)/);
+  assert.match(aiPage, /removeEventListener\('pointerdown', closeOnOutsidePointer\)/);
+});
+
 test('chat keeps long answers in an independently scrollable viewport area', () => {
   assert.match(styles, /\.fp-app-chat \.fp-ai-chat-area\s*\{[^}]*min-height:\s*0/s);
   assert.match(chat, /flex-1 min-h-0 overflow-y-auto/);
@@ -29,7 +37,7 @@ test('chat keeps long answers in an independently scrollable viewport area', () 
 });
 
 test('chat page keeps model and persona in collapsed settings beside a compact chart context', () => {
-  const settingsStart = aiPage.indexOf('<details className="fp-ai-settings">');
+  const settingsStart = aiPage.indexOf('<details ref={settingsRef} className="fp-ai-settings">');
   const settingsEnd = aiPage.indexOf('</details>', settingsStart);
   assert.notEqual(settingsStart, -1);
   assert.notEqual(settingsEnd, -1);
@@ -58,6 +66,13 @@ test('chat waiting feedback stays inline and does not render blank assistant bub
   assert.match(chat, /message\.content\.trim\(\)\.length > 0/);
   assert.doesNotMatch(chat, /fp-chat-loading|fp-chat-spinner/);
   assert.match(styles, /\.fp-chat-progress\s*\{[^}]*margin-left:/s);
+  assert.match(chatHook, /连接已结束，但没有收到回答/);
+});
+
+test('horoscope tool requests send SSE keepalives while awaiting model completion', () => {
+  const server = source('../src/server.js');
+  assert.match(server, /setInterval\(\(\) => \{\s*if \(!res\.writableEnded\) res\.write\(': keep-alive\\n\\n'\);\s*\}, 10000\)/);
+  assert.match(server, /clearInterval\(heartbeat\)/);
 });
 
 test('chat scrollbar uses FatePilot theme colors', () => {

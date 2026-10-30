@@ -292,6 +292,15 @@ function sendOpenAICompatibleTextStream(res, content) {
 async function proxyLLMChatWithHoroscopeTool(res, { apiKey, model, messages, stream, max_tokens, fortuneContext }) {
   const requestMessages = [...messages];
   const maxToolRounds = 2;
+  // Tool calls run synchronously before the model response is streamed. Keep
+  // idle proxies (for example Render's edge) from closing this long request.
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  const heartbeat = setInterval(() => {
+    if (!res.writableEnded) res.write(': keep-alive\n\n');
+  }, 10000);
+  heartbeat.unref?.();
   try {
     for (let round = 0; round <= maxToolRounds; round += 1) {
       const requestBody = {
@@ -309,9 +318,14 @@ async function proxyLLMChatWithHoroscopeTool(res, { apiKey, model, messages, str
         body: JSON.stringify(requestBody),
       });
       if (!upstream.ok) {
-        res.statusCode = upstream.status;
-        res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/json');
-        res.end(await upstream.text());
+        const errorBody = await upstream.text();
+        if (res.headersSent) {
+          sendOpenAICompatibleTextStream(res, `模型服务请求失败（${upstream.status}）：${errorBody || '请稍后重试。'}`);
+        } else {
+          res.statusCode = upstream.status;
+          res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/json');
+          res.end(errorBody);
+        }
         return;
       }
 
@@ -351,11 +365,13 @@ async function proxyLLMChatWithHoroscopeTool(res, { apiKey, model, messages, str
     }
   } catch (error) {
     console.error('[ziwei_horoscope_tool_error]', error?.message || error);
-    if (stream) {
+    if (res.headersSent && !res.writableEnded) {
       sendOpenAICompatibleTextStream(res, '运限查询暂时失败，请稍后重试。');
     } else {
       sendJson(res, 502, { error: '运限查询暂时失败' });
     }
+  } finally {
+    clearInterval(heartbeat);
   }
 }
 
