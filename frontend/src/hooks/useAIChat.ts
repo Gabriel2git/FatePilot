@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Message, PersonaType, buildFortuneToolContext, generateMasterPrompt, getDefaultSystemPrompt, getLLMResponse } from '@/lib/ai';
+import { createSseDataParser } from '@/lib/sseDataParser';
 import type { ContextStatus, ZiweiData } from '@/types';
 
 type LoadingStage = 'context' | 'model';
@@ -112,38 +113,35 @@ export function useAIChat(
       setMessages([...newMessages, { role: 'assistant', content: '' }]);
       setDebugPrompt(`=== 系统提示词 ===\n${systemPrompt}`);
 
+      const parseSse = createSseDataParser((line: string) => {
+        try {
+          const data = JSON.parse(line);
+          const reasoningDelta = data?.choices?.[0]?.delta?.reasoning_content;
+          if (reasoningDelta) hasReasoningStream = true;
+          const delta = data?.choices?.[0]?.delta?.content;
+          if (!delta) return;
+
+          aiResponseContent += delta;
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[tempMessageIndex] = { role: 'assistant', content: aiResponseContent };
+            return updated;
+          });
+        } catch {
+          // Ignore malformed complete SSE data lines, but never discard partial chunks.
+        }
+      });
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         if (!value) continue;
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n').filter((line) => line.trim() !== '');
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-
-          try {
-            const data = JSON.parse(line.slice(6));
-            const reasoningDelta = data?.choices?.[0]?.delta?.reasoning_content;
-            if (reasoningDelta) {
-              hasReasoningStream = true;
-            }
-            const delta = data?.choices?.[0]?.delta?.content;
-            if (!delta) continue;
-
-            aiResponseContent += delta;
-            setMessages((prev) => {
-              const updated = [...prev];
-              updated[tempMessageIndex] = { role: 'assistant', content: aiResponseContent };
-              return updated;
-            });
-          } catch {
-            // Ignore malformed stream lines.
-          }
-        }
+        parseSse.push(decoder.decode(value, { stream: true }));
       }
+      parseSse.push(decoder.decode());
+      parseSse.finish();
 
       if (!aiResponseContent.trim()) {
         setMessages((prev) => {

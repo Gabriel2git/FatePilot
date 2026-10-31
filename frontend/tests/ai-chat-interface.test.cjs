@@ -14,6 +14,23 @@ const centerInfo = source('src/components/ZiweiChart/CenterInfo.tsx');
 const chartDecorations = source('src/components/ZiweiChart/chartDecorations.ts');
 const aiSource = source('src/lib/ai.ts');
 const chatHook = source('src/hooks/useAIChat.ts');
+const sseParser = require('../src/lib/sseDataParser.js');
+
+test('SSE parser preserves events split across arbitrary network chunks and UTF-8 boundaries', () => {
+  const received = [];
+  const parser = sseParser.createSseDataParser((line) => received.push(JSON.parse(line)));
+  const event = `data: ${JSON.stringify({ choices: [{ delta: { content: '流月结果' } }] })}\n\n`;
+  const bytes = new TextEncoder().encode(`${event}: keep-alive\n\ndata: [DONE]\n\n`);
+  const splitAt = bytes.findIndex((byte, index) => byte === 0xe6 && bytes[index + 1] === 0x9c && bytes[index + 2] === 0x88) + 1;
+  const decoder = new TextDecoder();
+  parser.push(decoder.decode(bytes.slice(0, splitAt), { stream: true }));
+  parser.push(decoder.decode(bytes.slice(splitAt), { stream: true }));
+  parser.push(decoder.decode());
+  parser.finish();
+
+  assert.equal(received.length, 1);
+  assert.equal(received[0].choices[0].delta.content, '流月结果');
+});
 
 test('tools menu closes on outside pointer and Escape', () => {
   assert.match(page, /addEventListener\('pointerdown', closeOnOutsidePointer\)/);
@@ -67,12 +84,15 @@ test('chat waiting feedback stays inline and does not render blank assistant bub
   assert.doesNotMatch(chat, /fp-chat-loading|fp-chat-spinner/);
   assert.match(styles, /\.fp-chat-progress\s*\{[^}]*margin-left:/s);
   assert.match(chatHook, /连接已结束，但没有收到回答/);
+  assert.match(chatHook, /parseSse\.push\(decoder\.decode\(value, \{ stream: true \}\)\)/);
+  assert.match(chatHook, /parseSse\.finish\(\)/);
 });
 
 test('horoscope tool requests send SSE keepalives while awaiting model completion', () => {
   const server = source('../src/server.js');
   assert.match(server, /setInterval\(\(\) => \{\s*if \(!res\.writableEnded\) res\.write\(': keep-alive\\n\\n'\);\s*\}, 10000\)/);
   assert.match(server, /clearInterval\(heartbeat\)/);
+  assert.match(server, /模型没有生成可显示的文字/);
 });
 
 test('chat scrollbar uses FatePilot theme colors', () => {

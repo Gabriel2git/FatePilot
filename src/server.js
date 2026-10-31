@@ -333,7 +333,15 @@ async function proxyLLMChatWithHoroscopeTool(res, { apiKey, model, messages, str
       const assistantMessage = completion?.choices?.[0]?.message;
       const toolCalls = assistantMessage?.tool_calls || [];
       if (!toolCalls.length) {
-        sendOpenAICompatibleTextStream(res, assistantMessage?.content || '');
+        const content = assistantMessage?.content?.trim();
+        if (!content) {
+          console.warn('[ziwei_horoscope_empty_completion]', JSON.stringify({
+            model,
+            finishReason: completion?.choices?.[0]?.finish_reason || 'unknown',
+            hasAssistantMessage: Boolean(assistantMessage),
+          }));
+        }
+        sendOpenAICompatibleTextStream(res, content || '模型没有生成可显示的文字，请重试；如果重复出现，请检查模型服务日志。');
         return;
       }
       if (round === maxToolRounds) {
