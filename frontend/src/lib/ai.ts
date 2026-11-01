@@ -247,7 +247,7 @@ export async function generateMasterPrompt(
   targetYear: number,
   persona: PersonaType = 'companion',
   selectionContext?: SelectedContext,
-  useRAG: boolean = true,
+  useRAG: boolean = false,
 ) {
   const personaPrompt = PERSONA_PROMPTS[persona];
 

@@ -14,7 +14,12 @@ function buildContext(results: any[]): string {
 }
 
 export async function POST(request: Request) {
-  console.log('[RAG API] 收到请求');
+  if (process.env.RAG_ENABLED !== 'true') {
+    return NextResponse.json(
+      { error: 'RAG vector service is disabled', ragEnabled: false },
+      { status: 503 },
+    );
+  }
 
   try {
     const { query, threshold = 0.7, count, topK, topic } = await request.json();
@@ -22,8 +27,6 @@ export async function POST(request: Request) {
     console.log('[RAG API] 查询参数:', { query: query?.substring(0, 50), threshold, count, topic });
 
     const apiKey = process.env.DASHSCOPE_API_KEY;
-    console.log('[RAG API] DashScope API Key 前10位:', apiKey?.substring(0, 10));
-
     const embeddingResponse = await axios.post(
       'https://dashscope.aliyuncs.com/api/v1/services/embeddings/multimodal-embedding/multimodal-embedding',
       {

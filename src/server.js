@@ -3,6 +3,7 @@ const path = require('path');
 const iztro = require('iztro');
 const RetrievalService = require('../backend/services/retrievalService');
 const { ZIWEI_HOROSCOPE_TOOL, queryZiweiHoroscope } = require('./ziweiHoroscopeTool');
+const { sendOpenAICompatibleTextStream } = require('./sseResponse');
 
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config({ path: path.join(__dirname, '../backend/.env') });
@@ -17,17 +18,20 @@ const MAX_YEAR = 2100;
 const MID_YEAR_ANCHOR = '06-30';
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const CACHE_MAX_SIZE = 300;
+const RAG_ENABLED = process.env.RAG_ENABLED === 'true';
 
 console.log('=== Server Start ===');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('AUTH_CODE exists:', !!process.env.AUTH_CODE);
 console.log('LLM API key exists:', !!getProviderApiKey());
 
-const retrievalService = new RetrievalService();
-retrievalService.initialize().catch(console.error);
+const retrievalService = RAG_ENABLED ? new RetrievalService() : null;
+if (retrievalService) retrievalService.initialize().catch(console.error);
 
 function getRetrievalHealth() {
-  return retrievalService.getStatus();
+  return retrievalService
+    ? { enabled: true, ...retrievalService.getStatus() }
+    : { enabled: false, initialized: false, error: 'RAG vector service is disabled' };
 }
 
 class TTLCache {
@@ -271,24 +275,6 @@ async function proxyLLMChat(res, body) {
   }
 }
 
-function sendOpenAICompatibleTextStream(res, content) {
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  const created = Math.floor(Date.now() / 1000);
-  const id = `chatcmpl-${Date.now()}`;
-  const writeChunk = (delta, finishReason = null) => res.write(`data: ${JSON.stringify({
-    id,
-    object: 'chat.completion.chunk',
-    created,
-    model: 'ziwei-tool-result',
-    choices: [{ index: 0, delta, finish_reason: finishReason }],
-  })}\n\n`);
-  if (content) writeChunk({ content });
-  writeChunk({}, 'stop');
-  res.end('data: [DONE]\n\n');
-}
-
 async function proxyLLMChatWithHoroscopeTool(res, { apiKey, model, messages, stream, max_tokens, fortuneContext }) {
   const requestMessages = [...messages];
   const maxToolRounds = 2;
@@ -298,7 +284,7 @@ async function proxyLLMChatWithHoroscopeTool(res, { apiKey, model, messages, str
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
   const heartbeat = setInterval(() => {
-    if (!res.writableEnded) res.write(': keep-alive\n\n');
+    if (!res.writableEnded && !res.destroyed) res.write(': keep-alive\n\n');
   }, 10000);
   heartbeat.unref?.();
   try {
@@ -702,6 +688,7 @@ const server = http.createServer(async (req, res) => {
     const retrievalHealth = getRetrievalHealth();
     sendJson(res, 200, {
       status: 'ok',
+      ragEnabled: retrievalHealth.enabled,
       ragInitialized: retrievalHealth.initialized,
       ragError: retrievalHealth.error || null,
     });
@@ -849,6 +836,10 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'POST' && req.url === '/api/rag/search') {
+    if (!retrievalService) {
+      sendJson(res, 503, { error: 'RAG vector service is disabled', ragEnabled: false });
+      return;
+    }
     try {
       const body = await parseRequestBody(req);
       const {
@@ -883,6 +874,10 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'POST' && req.url === '/api/rag/test') {
+    if (!retrievalService) {
+      sendJson(res, 503, { error: 'RAG vector service is disabled', ragEnabled: false });
+      return;
+    }
     try {
       const body = await parseRequestBody(req);
       const {

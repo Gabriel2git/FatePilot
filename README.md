@@ -5,8 +5,8 @@ FatePilot 是一个紫微斗数排盘与 AI 解读应用。本文档是项目当
 ## 项目组成
 
 - `frontend/`：Next.js 14 + React 18 前端，包含出生信息表单、命盘、运限切换和 AI 对话界面。
-- `src/server.js`：Node.js HTTP API，调用 `iztro` 排盘，并代理模型请求、校验邀请码和提供 RAG 查询接口。
-- `backend/services/retrievalService.js`：RAG 检索服务；使用 DashScope 生成向量，并连接 Supabase 向量库。
+- `src/server.js`：Node.js HTTP API，调用 `iztro` 排盘、代理模型请求并校验邀请码；RAG 接口默认关闭。
+- `backend/services/retrievalService.js`：可选 RAG 检索服务；默认关闭，启用时使用 DashScope 生成向量并连接 Supabase 向量库。
 - `backend/data/`：检索文档与本地向量数据。知识库原文和生成数据请勿随意覆盖。
 - `frontend/src/lib/`：排盘辅助计算、AI prompt、四化、RAG 请求等业务逻辑。
 - `frontend/src/hooks/`：命盘数据、AI 对话、保存案例等状态逻辑。
@@ -32,6 +32,8 @@ AUTH_CODE=your_invite_code
 PROVIDER_BASE_URL=https://api.deepseek.com/v1
 DEEPSEEK_API_KEY=your_deepseek_api_key
 
+# RAG 默认关闭。确认 DashScope 额度可用后，设置 RAG_ENABLED=true 才会启用。
+RAG_ENABLED=false
 # RAG 检索所需；SUPABASE_URL 应是项目根地址，不要带 /rest/v1/。
 DASHSCOPE_API_KEY=your_dashscope_api_key
 SUPABASE_URL=https://your-project.supabase.co
@@ -56,7 +58,7 @@ node src/server.js
 npm run dev
 ```
 
-打开 <http://localhost:3000>。后端健康检查地址为 <http://localhost:3001/health>；RAG 是否就绪看返回中的 `ragInitialized`，仅有 `status: ok` 不代表向量检索已连通。
+打开 <http://localhost:3000>。后端健康检查地址为 <http://localhost:3001/health>；返回中的 `ragEnabled` 和 `ragInitialized` 分别表示 RAG 是否启用和是否完成初始化。当前默认关闭 RAG，不影响命盘与模型对话。
 
 ## 代码阅读顺序
 
@@ -76,8 +78,8 @@ npm run dev
 | `POST` | `/api/ziwei-lite` | 命盘及当前运限的轻量数据 |
 | `POST` | `/api/ziwei-context` | 当前选中上下文、运限年份信息和 prompt 运限区块 |
 | `POST` | `/api/ziwei` | 聚合命盘与运限数据 |
-| `POST` | `/api/rag/search` | 检索知识库并返回上下文 |
-| `POST` | `/api/rag/test` | 检索并返回调试 prompt |
+| `POST` | `/api/rag/search` | 可选知识库检索；默认关闭，开启需设置 `RAG_ENABLED=true` |
+| `POST` | `/api/rag/test` | 可选 RAG 调试接口；默认关闭 |
 | `POST` | `/api/llm/chat` | 代理兼容 Chat Completions 模型调用 |
 | `POST` | `/api/verify-code` | 校验邀请码 |
 

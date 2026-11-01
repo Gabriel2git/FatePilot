@@ -90,9 +90,10 @@ test('chat waiting feedback stays inline and does not render blank assistant bub
 
 test('horoscope tool requests send SSE keepalives while awaiting model completion', () => {
   const server = source('../src/server.js');
-  assert.match(server, /setInterval\(\(\) => \{\s*if \(!res\.writableEnded\) res\.write\(': keep-alive\\n\\n'\);\s*\}, 10000\)/);
+  assert.match(server, /setInterval\(\(\) => \{\s*if \(!res\.writableEnded && !res\.destroyed\) res\.write\(': keep-alive\\n\\n'\);\s*\}, 10000\)/);
   assert.match(server, /clearInterval\(heartbeat\)/);
   assert.match(server, /模型没有生成可显示的文字/);
+  assert.match(server, /require\('\.\/sseResponse'\)/);
 });
 
 test('chat scrollbar uses FatePilot theme colors', () => {
@@ -117,6 +118,16 @@ test('AI can query engine-computed flows outside the currently selected period',
   assert.match(server, /targetMonth/);
   assert.match(aiSource, /selectedContext\?\.targetMonth \? `\\n│   └流月宫位/);
   assert.match(aiSource, /monthlyMutagen/);
+});
+
+test('chat skips RAG by default and both API entry points are disabled unless explicitly enabled', () => {
+  const server = source('../src/server.js');
+  const ragRoute = source('src/app/api/rag/search/route.ts');
+  assert.match(aiSource, /useRAG: boolean = false/);
+  assert.match(server, /const RAG_ENABLED = process\.env\.RAG_ENABLED === 'true'/);
+  assert.match(server, /RAG vector service is disabled/);
+  assert.match(ragRoute, /process\.env\.RAG_ENABLED !== 'true'/);
+  assert.doesNotMatch(ragRoute, /API Key 前10位/);
 });
 
 test('decade selection keeps the reference year when it belongs to that decade', () => {
